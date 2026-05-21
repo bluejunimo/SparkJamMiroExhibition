@@ -1,0 +1,361 @@
+/* Base Reset & Styling */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body, html { height: 100%; width: 100%; overflow: hidden; background-color: #f4f4f5; }
+
+/* -------------------------
+    CANVAS & BOARD
+-------------------------- */
+#viewport {
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: radial-gradient(#d1d1d1 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index: 1;
+    overflow: hidden;
+}
+
+#board {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    transform-origin: 0 0;
+}
+
+#svg-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; overflow: visible; z-index: 4;
+}
+
+#html-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 5;
+}
+
+/* -------------------------
+    UI TOOLBARS
+-------------------------- */
+.toolbar {
+    position: fixed; background: #ffffff; border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); display: flex; align-items: center; z-index: 10;
+}
+.top-left { top: 20px; left: 20px; padding: 8px 16px; gap: 8px; }
+.logo { font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: #050038; }
+.board-title { font-size: 14px; font-weight: 600; }
+.left-vertical {
+    top: 50%; left: 20px; transform: translateY(-50%); flex-direction: column; padding: 12px 8px; gap: 12px;
+}
+.icon-btn {
+    background: none; border: none; cursor: pointer; border-radius: 4px;
+    font-size: 18px; color: #050038; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center; transition: background 0.1s;
+}
+.icon-btn:hover { background-color: #f0f0f0; }
+.icon-btn.active { background: #e5e7ff; color: #4262ff; outline: 2px solid #4262ff; }
+.hidden { display: none !important; }
+
+/* -------------------------
+    BOARD OBJECTS 
+-------------------------- */
+.board-object {
+    position: absolute;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.board-object.active-obj { outline: 3px solid #4262ff; z-index: 100; }
+.board-object textarea {
+    width: 100%; height: 100%; border: none; background: transparent;
+    resize: none; outline: none; text-align: center; font-size: 14px;
+}
+
+/* Specific Object Types */
+.sticky-note { width: 150px; height: 150px; background: #ffeb3b; padding: 15px; }
+.shape-rect { width: 160px; height: 100px; background: #e3f2fd; border: 2px solid #2196f3; border-radius: 8px; padding: 10px; }
+.text-box { width: 200px; height: auto; background: transparent; box-shadow: none; padding: 5px; }
+.text-box textarea { text-align: left; font-size: 18px; color: #050038; overflow: hidden; height: 40px; }
+.frame-box { width: 400px; height: 300px; background: rgba(255, 255, 255, 0.4); border: 2px dashed #9e9e9e; align-items: flex-start; justify-content: flex-start; }
+.frame-title { position: absolute; top: -25px; left: 0; font-size: 14px; font-weight: bold; color: #555; pointer-events: none; }
+
+/* Connection Handles (Applies to Stickies & Shapes) */
+/* --- MIRO CONNECTOR HANDLES --- */
+.conn-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border: 2px solid #4262ff;
+    border-radius: 50%;
+    cursor: crosshair;
+    z-index: 10;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* Reveal connection points cleanly when the object is active or hovered */
+.board-object:hover .conn-handle,
+.board-object.active-obj .conn-handle {
+    opacity: 1;
+}
+
+.conn-handle:hover {
+    transform: scale(1.3);
+    background: #4262ff;
+}
+
+/* Precise Edge Positioning offsets */
+.conn-handle.top    { top: -6px; left: calc(50% - 6px); }
+.conn-handle.right  { right: -6px; top: calc(50% - 6px); }
+.conn-handle.bottom { bottom: -6px; left: calc(50% - 6px); }
+.conn-handle.left   { left: -6px; top: calc(50% - 6px); }
+
+/* -------------------------
+    ACCESSIBILITY MODAL
+-------------------------- */
+#onboarding-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(244, 244, 245, 0.9); display: flex; 
+    align-items: center; justify-content: center;
+    z-index: 1000; transition: opacity 0.3s ease;
+}
+
+#onboarding-overlay.hidden { display: none !important; opacity: 0; }
+
+.onboarding-modal {
+    background: #ffffff; padding: 40px; border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.1); width: 1000px; max-width: 95%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.modal-header { text-align: center; margin-bottom: 50px; }
+.modal-logo { font-size: 32px; font-weight: 800; color: #050038; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+.modal-logo span { background: #ffeb3b; padding: 4px 8px; border-radius: 4px; font-size: 24px; letter-spacing: -2px; }
+.modal-header h2 { font-size: 28px; color: #000; margin-bottom: 8px; font-weight: 700; }
+.modal-header p { font-size: 16px; color: #000; }
+
+.step-title { font-size: 24px; color: #000; margin-bottom: 30px; font-weight: 700; }
+
+.toolbar-options { display: flex; align-items: stretch; gap: 40px; margin-bottom: 40px; }
+.option-col { flex: 1; display: flex; flex-direction: column; }
+.middle-col { border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; padding: 0 40px; margin: 0 -20px; }
+
+.option-col h4 { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 20px; color: #000; }
+
+.preview-box {
+    border: 1px solid #000; border-radius: 8px; padding: 20px; min-height: 120px;
+    display: flex; flex-wrap: wrap; gap: 15px; align-content: flex-start; margin-bottom: 20px;
+}
+.custom-preview { justify-content: center; align-items: center; gap: 30px; }
+.preview-box span { font-size: 20px; width: 24px; text-align: center; color: #000; }
+.preview-box .add-btn { background: #000; color: #fff; border-radius: 4px; font-size: 16px; font-weight: bold; line-height: 24px; height: 24px; cursor: default; }
+
+.desc { font-size: 14px; color: #000; line-height: 1.5; margin-bottom: 10px; flex-grow: 1; }
+.link { font-size: 14px; color: #000; text-decoration: underline; margin-bottom: 20px; display: inline-block; cursor: pointer; }
+
+.select-tool-btn {
+    background: #000; color: #fff; border: 2px solid #000; padding: 12px;
+    font-size: 14px; font-weight: 600; border-radius: 6px; cursor: pointer; width: 100%; transition: all 0.2s;
+}
+.select-tool-btn:hover { background: #333; }
+.select-tool-btn.selected { background: #fff; color: #000; }
+
+.modal-footer { display: flex; justify-content: flex-end; margin-top: 20px; }
+#continue-btn {
+    background: #4262ff; color: #fff; border: none; padding: 12px 32px;
+    font-size: 16px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s;
+}
+#continue-btn:hover:not(:disabled) { background: #2b42c4; }
+#continue-btn:disabled { background: #a6b5ff; cursor: not-allowed; }
+
+/* Update Sidebar Z-index so it sits above the modal backdrop */
+#sidebar {
+    z-index: 1001; 
+    transition: all 0.3s ease;
+}
+
+/* Make overlay backdrop slightly more transparent so sidebar pops */
+#onboarding-overlay {
+    background: rgba(244, 244, 245, 0.85); 
+    backdrop-filter: blur(2px);
+}
+
+/* Modal Layout Adjustments */
+.modal-footer.right-align { justify-content: flex-end; }
+.modal-footer.space-between { justify-content: space-between; align-items: center; margin-top: 40px; }
+.modal-footer .link { margin-bottom: 0; }
+
+/* -------------------------
+    STEP 2: SETTINGS CARDS
+-------------------------- */
+.settings-list {
+    display: flex; flex-direction: column; gap: 16px;
+}
+
+.setting-card {
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid #000; border-radius: 8px; padding: 24px;
+    background: #fff;
+}
+
+.setting-icon {
+    font-size: 24px; width: 40px; display: flex; justify-content: center;
+}
+
+.setting-text {
+    flex-grow: 1; padding: 0 20px;
+}
+
+.setting-text h4 {
+    font-size: 18px; font-weight: 700; color: #000; margin-bottom: 8px;
+}
+
+.setting-text p {
+    font-size: 14px; color: #000; line-height: 1.5; margin: 0;
+}
+
+/* Toggle Switch CSS */
+.toggle-switch {
+    position: relative; display: inline-block; width: 50px; height: 28px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .3s; border-radius: 34px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 20px; width: 20px;
+    left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%;
+}
+input:checked + .slider { background-color: #4262ff; }
+input:checked + .slider:before { transform: translateX(22px); }
+
+#done-btn {
+    background: #4262ff; color: #fff; border: none; padding: 12px 32px;
+    font-size: 16px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s;
+}
+#done-btn:hover { background: #2b42c4; }
+
+/* -----------------------------------------
+   RESIZING & AUTO-FONT FITTING REFINEMENTS
+-------------------------------------------- */
+
+/* Update sticky note base styling to match image and auto-expand */
+.sticky-note { 
+    width: 150px; 
+    min-height: 150px; 
+    height: auto; /* Allows height to expand dynamically */
+    background: #ffeb3b; 
+    padding: 15px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+/* Ensure textarea grows vertically without scrolling */
+.sticky-note textarea {
+    height: auto;
+    min-height: 24px;
+    overflow: hidden;
+    text-align: center;
+    font-size: 16px !important; /* Lock font size for standard sticky feel */
+}
+
+/* Force frames to sit at the absolute bottom of the stack */
+.frame-box { 
+    width: 400px; 
+    height: 300px; 
+    background: rgba(255, 255, 255, 0.4); 
+    border: 2px dashed #9e9e9e; 
+    align-items: flex-start; 
+    justify-content: flex-start; 
+    z-index: 1 !important; 
+}
+
+.frame-box.active-obj {
+    z-index: 1 !important; 
+    outline: 3px solid #4262ff;
+}
+
+/* -----------------------------------------
+    STICKY NOTE EXTENDED COLOR SIDEBAR
+-------------------------------------------- */
+#sticky-color-panel {
+    position: fixed;
+    top: 50%;
+    left: 72px; /* Placed cleanly right next to the 20px left + 44px wide main sidebar */
+    transform: translateY(-50%);
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1001; /* Sits at equivalent level to active sidebar elements */
+}
+
+/* 2-Column Responsive Color Square Matrix Grid */
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 44px);
+    gap: 10px;
+}
+
+.sticky-color-swatch {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05);
+    transition: transform 0.15s, border-color 0.15s;
+}
+
+.sticky-color-swatch:hover {
+    transform: scale(1.05);
+}
+
+/* Distinctive selection ring outline styling */
+.sticky-color-swatch.selected-color {
+    outline: 2px solid #4262ff;
+    outline-offset: 2px;
+}
+
+/* Action Utility Panel Row Buttons */
+.panel-action-btn {
+    background: #f1f3f5;
+    border: none;
+    color: #050038;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    transition: background 0.1s;
+}
+
+.panel-action-btn:hover {
+    background: #e2e6ea;
+}
+
+.panel-action-btn .btn-icon {
+    font-size: 14px;
+}
+
+/* Hide element visually while keeping it fully accessible to screen readers */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
