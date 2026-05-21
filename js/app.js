@@ -1100,34 +1100,65 @@ let   selectedConfig     = null;
 
 const toolConfigs = {
     simple: [
-        { id: 'select', icon: '↖', title: 'Select (V)' },
-        { id: 'frame',  icon: '🪟', title: 'Frame (F)' },
-        { id: 'sticky', icon: '📝', title: 'Sticky Note (N)' },
-        { id: 'shape',  icon: '⬛', title: 'Shape (S)' }
+        { id: 'select',   iconSrc: 'img/icons/arrow.svg',   title: 'Select (V)' },
+        { id: 'frame',    iconSrc: 'img/icons/frame.svg',   title: 'Frame (F)' },
+        { id: 'sticky',   iconSrc: 'img/icons/sticky.svg',  title: 'Sticky Note (N)' },
+        { id: 'shape',    iconSrc: 'img/icons/shapes.svg',  title: 'Shape (S)' },
+        { id: 'format',   iconSrc: 'img/icons/format.svg',  title: 'Formats and Flow' },
+        { id: 'diagrams', iconSrc: 'img/icons/connect.svg', title: 'Diagrams' }
     ],
     default: [
-        { id: 'select', icon: '↖', title: 'Select (V)' },
-        { id: 'text',   icon: 'T',  title: 'Text (T)' },
-        { id: 'sticky', icon: '📝', title: 'Sticky Note (N)' },
-        { id: 'shape',  icon: '⬛', title: 'Shape (S)' },
-        { id: 'pen',    icon: '🖊', title: 'Pen (P)' },
-        { id: 'frame',  icon: '🪟', title: 'Frame (F)' }
+        { id: 'select',   iconSrc: 'img/icons/arrow.svg',    title: 'Select (V)' },
+        { id: 'sticky',   iconSrc: 'img/icons/sticky.svg',   title: 'Sticky Note (N)' },
+        { id: 'frame',    iconSrc: 'img/icons/frame.svg',    title: 'Frame (F)' },
+        { id: 'template', iconSrc: 'img/icons/template.svg', title: 'Templates' },
+        { id: 'text',     iconSrc: 'img/icons/text.svg',     title: 'Text (T)' },
+        { id: 'shape',    iconSrc: 'img/icons/shapes.svg',   title: 'Shape (S)' },
+        { id: 'pen',      iconSrc: 'img/icons/pen.svg',      title: 'Pen (P)' },
+        { id: 'format',   iconSrc: 'img/icons/format.svg',   title: 'Formats and Flow' },
+        { id: 'sticker',  iconSrc: 'img/icons/sticker.svg',  title: 'Stickers, emojis and GIFs' },
+        { id: 'comment',  iconSrc: 'img/icons/chat.svg',     title: 'Comment' },
+        { id: 'diagrams', iconSrc: 'img/icons/connect.svg',  title: 'Diagrams' }
     ],
     custom: []
 };
 
 function renderSidebar(configKey) {
     sidebar.innerHTML = '';
-    const tools = configKey === 'custom' ? customSelectedTools : toolConfigs[configKey];
+    let tools;
+    if (configKey === 'custom') {
+        // Prefer the saved custom toolbar (enabled only, in order); fall back to legacy customSelectedTools
+        if (typeof savedCustomToolbar !== 'undefined' && savedCustomToolbar) {
+            tools = savedCustomToolbar.tools.filter(t => t.enabled);
+        } else {
+            tools = customSelectedTools;
+        }
+    } else {
+        tools = toolConfigs[configKey];
+    }
     tools.forEach((tool, index) => {
         const btn = document.createElement('button');
         btn.className = 'icon-btn tool-btn';
         if (index === 0) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
         else { btn.setAttribute('aria-pressed', 'false'); }
         btn.dataset.tool = tool.id;
-        btn.title = tool.title;
-        btn.setAttribute('aria-label', tool.title);
-        btn.innerText = tool.icon;
+        btn.title = tool.title || tool.label || tool.id;
+        if (tool.iconSrc) {
+            const img = document.createElement('img');
+            img.src = tool.iconSrc;
+            img.alt = '';
+            btn.appendChild(img);
+        } else {
+            btn.innerText = tool.icon;
+        }
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            activeTool = e.currentTarget.dataset.tool;
+            viewport.style.cursor = activeTool === 'select' ? 'grab' : 'crosshair';
+        });
+
+        btn.setAttribute('aria-label', btn.title);
         sidebar.appendChild(btn);
     });
 }
@@ -1147,17 +1178,23 @@ selectBtns.forEach(btn => {
         target.innerText = '✓ Selected';
         selectedConfig = target.getAttribute('data-config');
         continueBtn.disabled = false;
-        if (selectedConfig !== 'custom') renderSidebar(selectedConfig);
+
+        if (selectedConfig !== 'custom') {
+            renderSidebar(selectedConfig);
+        } else if (typeof savedCustomToolbar !== 'undefined' && savedCustomToolbar) {
+            renderSidebar('custom');
+        }
     });
 });
 
 continueBtn.addEventListener('click', () => {
     step1.classList.add('hidden');
-    if (selectedConfig === 'custom') {
+    if (selectedConfig === 'custom' && !savedCustomToolbar) {
         modalHeader.classList.add('hidden');
         stepCustomName.classList.remove('hidden');
         document.getElementById('toolbar-name-input').focus();
     } else {
+        if (selectedConfig === 'custom') renderSidebarFromDraft();
         step2.classList.remove('hidden');
     }
 });
@@ -1166,10 +1203,341 @@ document.getElementById('cancel-custom-name-btn').addEventListener('click', () =
     stepCustomName.classList.add('hidden');
     modalHeader.classList.remove('hidden');
     step1.classList.remove('hidden');
+    // Revert sidebar to whatever the current selection was (saved custom, or last preset)
+    if (selectedConfig === 'custom' && savedCustomToolbar) {
+        renderSidebar('custom');
+    } else if (selectedConfig && selectedConfig !== 'custom') {
+        renderSidebar(selectedConfig);
+    }
 });
 
+// --- CUSTOMIZE CREATION TOOLBAR STEP ---
+
+const CREATION_TOOLBAR_LIBRARY = [
+    { id: 'select',        iconSrc: 'img/icons/arrow.svg',    label: 'Select',                          title: 'Select' },
+    { id: 'format',        iconSrc: 'img/icons/format.svg',   label: 'Formats and Flow',                title: 'Formats and Flow' },
+    { id: 'template',      iconSrc: 'img/icons/template.svg', label: 'Templates',                       title: 'Templates' },
+    { id: 'sticky',        iconSrc: 'img/icons/sticky.svg',   label: 'Sticky Note',                     title: 'Sticky Note' },
+    { id: 'text',          iconSrc: 'img/icons/text.svg',     label: 'Text',                            title: 'Text' },
+    { id: 'shapes',        iconSrc: 'img/icons/shapes.svg',   label: 'Shapes and Lines',                title: 'Shapes and Lines' },
+    { id: 'pen',           iconSrc: 'img/icons/pen.svg',      label: 'Pen Tool',                        title: 'Pen Tool' },
+    { id: 'frame',         iconSrc: 'img/icons/frame.svg',    label: 'Frame',                           title: 'Frame' },
+    { id: 'sticker',       iconSrc: 'img/icons/sticker.svg',  label: 'Stickers, emojis and GIFs',       title: 'Stickers, emojis and GIFs' },
+    { id: 'comment',       iconSrc: 'img/icons/chat.svg',     label: 'Comment',                         title: 'Comment' },
+    { id: 'diagrams',      iconSrc: 'img/icons/connect.svg',  label: 'Diagrams',                        title: 'Diagrams' },
+    { id: 'integrations',  iconSrc: 'img/icons/more.svg',     label: 'Tools, Media and Integrations',   title: 'Tools, Media and Integrations' },
+];
+
+let creationToolbarDraft = CREATION_TOOLBAR_LIBRARY.map(t => ({ ...t, enabled: true }));
+let savedCustomToolbar = null; // { name, tools: [{ id, label, iconSrc, title, enabled }] }
+
+const stepCustomizeCreation = document.getElementById('step-customize-creation');
+const customizeToolsList = document.getElementById('customize-tools-list');
+
+function makeDefaultDraft() {
+    return CREATION_TOOLBAR_LIBRARY.map(t => ({ ...t, enabled: true }));
+}
+
+function renderToolRows() {
+    customizeToolsList.innerHTML = '';
+    creationToolbarDraft.forEach((tool, idx) => {
+        const row = document.createElement('div');
+        row.className = 'tool-row';
+        row.dataset.toolId = tool.id;
+        row.dataset.index = String(idx);
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('draggable', 'true');
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', tool.enabled ? 'true' : 'false');
+
+        // Toggle checkbox — not separately tabbable; row owns focus
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.tabIndex = -1;
+        toggle.className = 'tool-toggle-btn ' + (tool.enabled ? 'is-enabled' : 'is-disabled');
+        toggle.setAttribute('role', 'checkbox');
+        toggle.setAttribute('aria-checked', tool.enabled ? 'true' : 'false');
+        toggle.setAttribute('aria-label', tool.label);
+        toggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5L10 17.5L19 8.5" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleTool(tool.id);
+        });
+        row.appendChild(toggle);
+
+        // Tool icon
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'tool-row-icon';
+        const iconImg = document.createElement('img');
+        iconImg.src = tool.iconSrc;
+        iconImg.alt = '';
+        iconWrap.appendChild(iconImg);
+        row.appendChild(iconWrap);
+
+        // Label
+        const label = document.createElement('span');
+        label.className = 'tool-row-label';
+        label.textContent = tool.label;
+        row.appendChild(label);
+
+        // Drag handle
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = 'tool-drag-handle';
+        handle.setAttribute('aria-label', 'Drag to reorder ' + tool.label);
+        handle.tabIndex = -1;
+        handle.textContent = '☰'; // ☰
+        row.appendChild(handle);
+
+        // Drag events
+        row.addEventListener('dragstart', onRowDragStart);
+        row.addEventListener('dragover', onRowDragOver);
+        row.addEventListener('dragleave', onRowDragLeave);
+        row.addEventListener('drop', onRowDrop);
+        row.addEventListener('dragend', onRowDragEnd);
+
+        // Keyboard
+        row.addEventListener('keydown', onRowKeyDown);
+
+        customizeToolsList.appendChild(row);
+    });
+}
+
+function renderSidebarFromDraft() {
+    sidebar.innerHTML = '';
+    const enabled = creationToolbarDraft.filter(t => t.enabled);
+    enabled.forEach((tool, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'icon-btn tool-btn';
+        if (index === 0) btn.classList.add('active');
+        btn.dataset.tool = tool.id;
+        btn.title = tool.title;
+        const img = document.createElement('img');
+        img.src = tool.iconSrc;
+        img.alt = '';
+        btn.appendChild(img);
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            activeTool = e.currentTarget.dataset.tool;
+            viewport.style.cursor = activeTool === 'select' ? 'grab' : 'crosshair';
+        });
+        sidebar.appendChild(btn);
+    });
+}
+
+function renderCustomColumnFromSaved() {
+    const customBtn = document.getElementById('custom-toolbar-btn');
+    const editBtn = document.getElementById('edit-custom-btn');
+    const colTitle = document.getElementById('custom-col-title');
+    const previewBox = document.getElementById('custom-preview-box');
+
+    if (!savedCustomToolbar) {
+        colTitle.textContent = 'Create your own toolbar';
+        previewBox.innerHTML =
+            '<span class="custom-placeholder-icon">?</span>' +
+            '<span class="custom-placeholder-icon">?</span>' +
+            '<span class="add-btn">+</span>';
+        editBtn.classList.add('hidden');
+        customBtn.classList.remove('selected');
+        const orig = customBtn.getAttribute('data-original-text');
+        if (orig) customBtn.innerText = orig;
+        return;
+    }
+
+    colTitle.textContent = savedCustomToolbar.name;
+
+    // Rebuild preview box: enabled tool icons in order + add-btn
+    previewBox.innerHTML = '';
+    savedCustomToolbar.tools.filter(t => t.enabled).forEach(tool => {
+        const span = document.createElement('span');
+        span.className = 'preview-tool-icon';
+        const img = document.createElement('img');
+        img.src = tool.iconSrc;
+        img.alt = '';
+        span.appendChild(img);
+        previewBox.appendChild(span);
+    });
+    // const addBtn = document.createElement('span');
+    // addBtn.className = 'add-btn';
+    // addBtn.textContent = '+';
+    // previewBox.appendChild(addBtn);
+
+    // Mark the custom select button as selected (matches behavior at line ~586)
+    selectBtns.forEach(b => {
+        b.classList.remove('selected');
+        const orig = b.getAttribute('data-original-text');
+        if (orig) b.innerText = orig;
+    });
+    if (!customBtn.getAttribute('data-original-text')) {
+        customBtn.setAttribute('data-original-text', customBtn.innerText);
+    }
+    customBtn.classList.add('selected');
+    customBtn.innerText = '✓ Selected';
+    selectedConfig = 'custom';
+    continueBtn.disabled = false;
+
+    editBtn.classList.remove('hidden');
+}
+
+// --- Toggle / Reorder ---
+
+function toggleTool(toolId) {
+    const tool = creationToolbarDraft.find(t => t.id === toolId);
+    if (!tool) return;
+    tool.enabled = !tool.enabled;
+    renderToolRows();
+    renderSidebarFromDraft();
+    // Restore focus on the same row
+    const row = customizeToolsList.querySelector(`[data-tool-id="${toolId}"]`);
+    if (row) row.focus();
+}
+
+function moveTool(fromIndex, toIndex) {
+    if (toIndex < 0 || toIndex >= creationToolbarDraft.length) return;
+    const [moved] = creationToolbarDraft.splice(fromIndex, 1);
+    creationToolbarDraft.splice(toIndex, 0, moved);
+    renderToolRows();
+    renderSidebarFromDraft();
+    const row = customizeToolsList.querySelector(`[data-tool-id="${moved.id}"]`);
+    if (row) row.focus();
+}
+
+// --- Drag and drop ---
+
+let dragSrcId = null;
+
+function onRowDragStart(e) {
+    dragSrcId = e.currentTarget.dataset.toolId;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    // Required for Firefox
+    try { e.dataTransfer.setData('text/plain', dragSrcId); } catch (_) {}
+}
+
+function onRowDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const row = e.currentTarget;
+    if (row.dataset.toolId === dragSrcId) return;
+    const rect = row.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+    row.classList.toggle('drag-over-bottom', isAfter);
+    row.classList.toggle('drag-over-top', !isAfter);
+}
+
+function onRowDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+}
+
+function onRowDrop(e) {
+    e.preventDefault();
+    const targetRow = e.currentTarget;
+    const targetId = targetRow.dataset.toolId;
+    targetRow.classList.remove('drag-over-top', 'drag-over-bottom');
+    if (!dragSrcId || targetId === dragSrcId) return;
+
+    const rect = targetRow.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+
+    const fromIdx = creationToolbarDraft.findIndex(t => t.id === dragSrcId);
+    let toIdx = creationToolbarDraft.findIndex(t => t.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+
+    const [moved] = creationToolbarDraft.splice(fromIdx, 1);
+    if (fromIdx < toIdx) toIdx -= 1;
+    if (isAfter) toIdx += 1;
+    creationToolbarDraft.splice(toIdx, 0, moved);
+
+    renderToolRows();
+    renderSidebarFromDraft();
+    const movedRow = customizeToolsList.querySelector(`[data-tool-id="${moved.id}"]`);
+    if (movedRow) movedRow.focus();
+}
+
+function onRowDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    customizeToolsList.querySelectorAll('.drag-over-top, .drag-over-bottom')
+        .forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom'));
+    dragSrcId = null;
+}
+
+// --- Keyboard interactions ---
+
+function onRowKeyDown(e) {
+    const row = e.currentTarget;
+    const toolId = row.dataset.toolId;
+    const idx = creationToolbarDraft.findIndex(t => t.id === toolId);
+    if (idx < 0) return;
+
+    switch (e.key) {
+        case 'Enter':
+        case ' ':
+        case 'Spacebar':
+            e.preventDefault();
+            toggleTool(toolId);
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            moveTool(idx, idx - 1);
+            break;
+        case 'ArrowDown':
+            e.preventDefault();
+            moveTool(idx, idx + 1);
+            break;
+    }
+}
+
+// --- Step entry / exit handlers ---
+
+function enterCustomizeStep(fromStep) {
+    creationToolbarDraft = savedCustomToolbar
+        ? savedCustomToolbar.tools.map(t => ({ ...t }))
+        : makeDefaultDraft();
+    renderToolRows();
+    renderSidebarFromDraft();
+    if (fromStep) fromStep.classList.add('hidden');
+    modalHeader.classList.add('hidden');
+    stepCustomizeCreation.classList.remove('hidden');
+    const first = customizeToolsList.firstElementChild;
+    if (first) first.focus();
+}
+
 document.getElementById('continue-custom-name-btn').addEventListener('click', () => {
-    // Tool selection step — to be implemented
+    enterCustomizeStep(stepCustomName);
+});
+
+document.getElementById('edit-custom-btn').addEventListener('click', () => {
+    enterCustomizeStep(step1);
+});
+
+document.getElementById('customize-back-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    stepCustomizeCreation.classList.add('hidden');
+    stepCustomName.classList.remove('hidden');
+    document.getElementById('toolbar-name-input').focus();
+});
+
+document.getElementById('reset-default-btn').addEventListener('click', () => {
+    creationToolbarDraft = makeDefaultDraft();
+    renderToolRows();
+    renderSidebarFromDraft();
+    const first = customizeToolsList.firstElementChild;
+    if (first) first.focus();
+});
+
+document.getElementById('save-customize-btn').addEventListener('click', () => {
+    const nameInput = document.getElementById('toolbar-name-input');
+    const enteredName = (nameInput && nameInput.value.trim()) || (savedCustomToolbar && savedCustomToolbar.name) || 'Custom toolbar';
+    savedCustomToolbar = {
+        name: enteredName,
+        tools: creationToolbarDraft.map(t => ({ ...t })),
+    };
+    stepCustomizeCreation.classList.add('hidden');
+    modalHeader.classList.remove('hidden');
+    step1.classList.remove('hidden');
+    renderCustomColumnFromSaved();
+    renderSidebarFromDraft();
 });
 
 doneBtn.addEventListener('click', () => {
@@ -1179,6 +1547,12 @@ doneBtn.addEventListener('click', () => {
     setTimeout(() => sidebar.querySelector('.tool-btn')?.focus(), 100);
 });
 
+document.getElementById('settings-back-btn').addEventListener('click', () => {
+    step2.classList.add('hidden');
+    step1.classList.remove('hidden');
+});
+
+// --- 8. CUSTOM TOOLBAR PICKER ---
 // ─────────────────────────────────────────────────────────────────
 // 16. CUSTOM TOOLBAR PICKER
 // ─────────────────────────────────────────────────────────────────
@@ -1290,10 +1664,10 @@ function updateCustomPreviewBox() {
             s.title = tool.label;
             previewBox.appendChild(s);
         });
-        const add = document.createElement('span');
-        add.className = 'add-btn';
-        add.textContent = '+';
-        previewBox.appendChild(add);
+        // const add = document.createElement('span');
+        // add.className = 'add-btn';
+        // add.textContent = '+';
+        // previewBox.appendChild(add);
     }
 }
 

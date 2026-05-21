@@ -181,12 +181,12 @@
 
     <!-- Left Dynamic Sidebar with New Tools -->
     <nav class="toolbar left-vertical" id="sidebar" aria-label="Board tools">
-        <button class="icon-btn tool-btn active" data-tool="select" title="Select (V)" aria-pressed="true">↖</button>
-        <button class="icon-btn tool-btn" data-tool="text" title="Text (T)" aria-pressed="false">T</button>
-        <button class="icon-btn tool-btn" data-tool="sticky" title="Sticky Note (N)" aria-pressed="false">📝</button>
-        <button class="icon-btn tool-btn" data-tool="shape" title="Shape (S)" aria-pressed="false">⬛</button>
-        <button class="icon-btn tool-btn" data-tool="pen" title="Pen (P)" aria-pressed="false">🖊</button>
-        <button class="icon-btn tool-btn" data-tool="frame" title="Frame (F)" aria-pressed="false">🪟</button>
+        <button class="icon-btn tool-btn active" data-tool="select" title="Select (V)"><img src="img/icons/arrow.svg" alt="" aria-pressed="true"></button>
+        <button class="icon-btn tool-btn" data-tool="text" title="Text (T)"><img src="img/icons/text.svg" alt="" aria-pressed="false"></button>
+        <button class="icon-btn tool-btn" data-tool="sticky" title="Sticky Note (N)"><img src="img/icons/sticky.svg" alt="" aria-pressed="false"></button>
+        <button class="icon-btn tool-btn" data-tool="shape" title="Shape (S)"><img src="img/icons/shapes.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="pen" title="Pen (P)"><img src="img/icons/pen.svg" alt="" aria-pressed="false"></button>
+        <button class="icon-btn tool-btn" data-tool="frame" title="Frame (F)"><img src="img/icons/frame.svg" alt="" aria-pressed="false"></button>
     </nav>
 
     <div id="sticky-color-panel" class="hidden" role="dialog" aria-label="Sticky note colour picker">
@@ -212,9 +212,14 @@
                     <!-- Simple -->
                     <div class="option-col">
                         <h4>Simple toolbar</h4>
-                        <div class="preview-box" aria-hidden="true">
-                            <span>↖</span><span>🪟</span><span>📝</span><span>▱</span>
-                            <span>⛶</span><span>🔗</span><span class="add-btn">+</span>
+                        <div class="preview-box">
+                            <span class="preview-tool-icon"><img src="img/icons/arrow.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/frame.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/sticky.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/shapes.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/format.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/connect.svg" alt=""></span>
+                            <span class="add-btn">+</span>
                         </div>
                         <p class="desc">Best for screen readers. 6 creation tools and hides visual presentation tools.</p>
                         <a href="#" class="link">Show creation tools</a>
@@ -224,10 +229,19 @@
                     <!-- Default -->
                     <div class="option-col middle-col">
                         <h4>Default toolbar</h4>
-                        <div class="preview-box" aria-hidden="true">
-                            <span>↖</span><span>📝</span><span>🪟</span><span>📄</span>
-                            <span>T</span><span>▱</span><span>🖊</span><span>⛶</span>
-                            <span>😊</span><span>💬</span><span>🔗</span><span class="add-btn">+</span>
+                        <div class="preview-box">
+                            <span class="preview-tool-icon"><img src="img/icons/arrow.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/sticky.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/frame.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/template.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/text.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/shapes.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/pen.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/format.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/sticker.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/chat.svg" alt=""></span>
+                            <span class="preview-tool-icon"><img src="img/icons/connect.svg" alt=""></span>
+                            <span class="add-btn">+</span>
                         </div>
                         <p class="desc">11 creation tools; other tools available in submenu.</p>
                         <a href="#" class="link">Show creation tools</a>
@@ -235,8 +249,8 @@
                     </div>
 
                     <!-- Custom -->
-                    <div class="option-col">
-                        <h4>Create your own toolbar</h4>
+                    <div class="option-col" id="custom-option-col">
+                        <h4 id="custom-col-title">Create your own toolbar</h4>
                         <div class="preview-box custom-preview" id="custom-preview-box" aria-hidden="true">
                             <span class="custom-placeholder-icon">?</span>
                             <span class="custom-placeholder-icon">?</span>
@@ -244,7 +258,10 @@
                         </div>
                         <p class="desc">Choose which tools are easily accessible.</p>
                         <a href="#" class="link" id="show-tools-link">Show 34 available tools</a>
-                        <button class="select-tool-btn" data-config="custom" id="custom-toolbar-btn">Create custom toolbar</button>
+                        <div class="custom-select-row">
+                            <button class="select-tool-btn" data-config="custom" id="custom-toolbar-btn">Create custom toolbar</button>
+                            <button class="edit-custom-btn hidden" id="edit-custom-btn" aria-label="Edit custom toolbar" title="Edit custom toolbar">&#9998;</button>
+                        </div>
                     </div>
                 </div>
 
@@ -266,6 +283,38 @@
                 <div class="modal-footer space-between">
                     <button id="cancel-custom-name-btn" class="cancel-link">Cancel creating new toolbar</button>
                     <button id="continue-custom-name-btn" class="continue-custom-btn">Continue to selecting your tools</button>
+                </div>
+            </div>
+
+            <!-- STEP CUSTOMIZE CREATION -->
+            <div id="step-customize-creation" class="hidden">
+                <h3 class="step-title">Toolbar Customization: Creation toolbar</h3>
+                <p class="customize-subtitle">The creation toolbar helps you add sticky notes, frames, templates, and other objects to the board.</p>
+
+                <div class="customize-layout">
+                    <div class="customize-tools-list" id="customize-tools-list" role="listbox" aria-label="Creation toolbar tools">
+                        <!-- rows rendered dynamically -->
+                    </div>
+
+                    <aside class="customize-info">
+                        <div class="info-card">
+                            <h4><img src="img/icons/drag_click.svg" alt=""> With a mouse</h4>
+                            <p>Click to add, or remove. Drag to rearrange tools</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>With a keyboard</h4>
+                            <div class="kbd-row"><span>Insert or remove a tool with</span> <span class="kbd-pair"><kbd class="inline-kbd">Enter</kbd> or <kbd class="inline-kbd">Space</kbd></span></div>
+                            <div class="kbd-row"><span>Rearrange selected tools with</span> <span class="kbd-pair"><kbd class="inline-kbd">&uarr;</kbd>and <kbd class="inline-kbd">&darr;</kbd></span></div>
+                        </div>
+                    </aside>
+                </div>
+
+                <div class="modal-footer customize-footer">
+                    <a href="#" id="customize-back-btn" class="cancel-link">Back</a>
+                    <div class="customize-footer-actions">
+                        <button id="reset-default-btn" class="reset-btn">Reset to Default</button>
+                        <button id="save-customize-btn" class="continue-custom-btn">Save</button>
+                    </div>
                 </div>
             </div>
 
@@ -309,8 +358,10 @@
                     </div>
                 </div>
 
+                <a href="#" class="link settings-learn-link">Learn more about accessibility in Miro</a>
+
                 <div class="modal-footer space-between">
-                    <a href="#" class="link">Learn more about accessibility in Miro</a>
+                    <button id="settings-back-btn" class="gray-back-btn">Back</button>
                     <button id="done-btn">Done</button>
                 </div>
             </div>
