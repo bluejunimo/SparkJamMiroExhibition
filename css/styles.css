@@ -37,6 +37,121 @@ body, html {
 .logo { font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: #050038; }
 .divider { width: 1px; height: 20px; background: #e0e0e0; }
 .board-title { font-size: 14px; font-weight: 600; }
+
+/* -------------------------
+    ACCESSIBILITY MENU
+-------------------------- */
+.a11y-menu-trigger {
+    width: 44px; height: 44px; border-radius: 8px; border: none;
+    background: #ffffff; cursor: pointer; padding: 2px;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: 4px; transition: background 0.15s, outline-color 0.15s;
+    color: #050038;
+}
+.a11y-menu-trigger img { width: 36px; height: 36px; display: block; }
+.a11y-menu-trigger:hover { background: #e5e7ff; color: #4262ff; }
+.a11y-menu-trigger:focus-visible {
+    background: #e5e7ff; color: #4262ff;
+    outline: 2px solid #4262ff; outline-offset: 2px;
+}
+.a11y-menu-trigger[aria-expanded="true"] {
+    background: #e5e7ff; color: #4262ff;
+    outline: 2px solid #4262ff;
+}
+
+.kebab-btn {
+    width: 40px; height: 40px; border-radius: 8px; border: none;
+    background: transparent; cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1; color: #050038;
+    transition: background 0.15s;
+}
+.kebab-btn:hover { background: #f0f0f0; }
+.kebab-btn:focus-visible { outline: 2px solid #4262ff; outline-offset: 2px; }
+
+.a11y-menu,
+.a11y-submenu {
+    position: fixed;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    padding: 6px 0;
+    min-width: 280px;
+    z-index: 30;
+    font-family: 'DM Sans', sans-serif;
+}
+.a11y-submenu { min-width: 240px; }
+
+.a11y-menu-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    background: none; border: none; cursor: pointer;
+    padding: 10px 14px;
+    font-size: 14px; font-weight: 500;
+    color: #050038; text-align: left;
+    font-family: 'DM Sans', sans-serif;
+    box-sizing: border-box;
+    outline: none;
+}
+.a11y-menu-item:hover,
+.a11y-menu-item.is-active,
+.a11y-menu-item:focus-visible {
+    background: #eef1ff;
+}
+.a11y-menu-label { flex: 1; }
+.a11y-menu-chevron { margin-left: auto; font-size: 16px; color: #050038; }
+
+.a11y-menu-icon { width: 26px; height: 26px; flex-shrink: 0; }
+
+.a11y-menu-divider {
+    height: 1px; background: #e5e5e5; margin: 6px 8px;
+}
+
+/* Pill toggle */
+.a11y-menu-switch {
+    position: relative;
+    width: 36px; height: 20px;
+    background: #d4d4d8;
+    border-radius: 999px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.a11y-menu-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+}
+.a11y-toggle-row[aria-checked="true"] .a11y-menu-switch { background: #4262ff; }
+.a11y-toggle-row[aria-checked="true"] .a11y-menu-switch::after { transform: translateX(16px); }
+
+/* Radio rows in toolbar submenu */
+.a11y-radio-row {
+    cursor: pointer;
+}
+.a11y-radio-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid #c4c4c8;
+    flex-shrink: 0;
+    position: relative;
+    transition: border-color 0.15s;
+}
+.a11y-radio-row[aria-checked="true"] .a11y-radio-dot {
+    border-color: #4262ff;
+}
+.a11y-radio-row[aria-checked="true"] .a11y-radio-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #4262ff;
+}
 .left-vertical {
     top: 50%; left: 20px; transform: translateY(-50%); flex-direction: column; padding: 6px 4px; gap: 4px;
 }
@@ -349,12 +464,14 @@ body, html {
 }
 .shortcuts-table { width: 100%; border-collapse: collapse; }
 .shortcuts-table tr { border-radius: 6px; transition: background 0.1s; }
-.shortcuts-table tr:hover td { background: #f7f8ff; }
-.shortcuts-table tr:hover td:first-child { border-radius: 6px 0 0 6px; }
-.shortcuts-table tr:hover td:last-child { border-radius: 0 6px 6px 0; }
+.shortcuts-table tbody tr:hover td { background: #f7f8ff; }
+.shortcuts-table tbody tr:hover td:first-child { border-radius: 6px 0 0 6px; }
+.shortcuts-table tbody tr:hover td:last-child { border-radius: 0 6px 6px 0; }
 .shortcuts-table td { padding: 7px 8px; font-size: 13px; color: #333; vertical-align: middle; }
 .shortcuts-table td:first-child { color: #050038; font-weight: 500; width: 55%; }
 .shortcuts-table td:last-child { text-align: right; white-space: nowrap; }
+.shortcuts-table th { padding: 7px 8px; font-size: 12px; color: #050038; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; border-bottom: 1px solid #e0e0e0; }
+.shortcuts-table th:last-child { text-align: right; }
 
 kbd {
     display: inline-flex; align-items: center; justify-content: center;
@@ -411,6 +528,8 @@ kbd.inline-kbd { font-size: 11px; padding: 1px 5px; }
 
 .desc { font-size: 14px; color: #555; line-height: 1.5; margin-bottom: 10px; flex-grow: 1; }
 .link { font-size: 14px; color: #000; text-decoration: underline; margin-bottom: 16px; display: inline-block; cursor: pointer; }
+button.link, .link.link-button { background: none; border: none; padding: 0; font-family: inherit; text-align: left; }
+button.link:focus-visible, .link.link-button:focus-visible { outline: 2px solid #4262ff; outline-offset: 2px; border-radius: 2px; }
 
 .select-tool-btn {
     background: #000; color: #fff; border: 2px solid #000; padding: 12px;

@@ -51,6 +51,28 @@ function announcePolite(msg) {
 // Keep old name working for any existing callers
 function announceToScreenReader(msg) { announceAssertive(msg); }
 
+// Announce a modal step transition (polite — won't interrupt user typing)
+const STEP_ANNOUNCEMENTS = {
+    'step-1': "Step 1 of 2: Customize your toolbar.",
+    'step-custom-name': "Name your custom toolbar.",
+    'step-customize-creation': "Customize creation toolbar. Tab through tools and press Enter or Space to toggle, Up or Down to reorder.",
+    'step-2': "Step 2 of 2: Settings we've changed based on your setup.",
+};
+function announceStep(stepId) {
+    if (STEP_ANNOUNCEMENTS[stepId]) announcePolite(STEP_ANNOUNCEMENTS[stepId]);
+}
+
+// Keep the rest of the page inert while the onboarding overlay is open
+const ONBOARDING_INERT_SELECTORS = ['#viewport-wrap', '.toolbar.top-left', '#sidebar', '#shortcuts-toggle-btn'];
+function setOnboardingBackgroundInert(inert) {
+    ONBOARDING_INERT_SELECTORS.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        if (inert) el.setAttribute('inert', '');
+        else el.removeAttribute('inert');
+    });
+}
+
 /** Lightweight visual toast for sighted users (mirrors SR announcement) */
 function showToast(msg, durationMs = 2200) {
     const existing = document.querySelector('.a11y-toast');
@@ -73,10 +95,10 @@ function getToolBtns() { return document.querySelectorAll('.tool-btn'); }
 function activateToolBtn(btn) {
     getToolBtns().forEach(b => {
         b.classList.remove('active');
-        b.setAttribute('aria-pressed', 'false');
+        b.setAttribute('aria-checked', 'false');
     });
     btn.classList.add('active');
-    btn.setAttribute('aria-pressed', 'true');
+    btn.setAttribute('aria-checked', 'true');
     activeTool = btn.dataset.tool;
     viewport.style.cursor = activeTool === 'select' ? 'grab' : 'crosshair';
 }
@@ -666,12 +688,16 @@ function spawnObject(type, x, y, opts = {}) {
         el.classList.add('shape-rect');
         el.setAttribute('tabindex', '0');
         el.setAttribute('role', 'img');
-        el.setAttribute('aria-label', 'Shape. Double-click to add text.');
+        el.setAttribute('aria-label', 'Shape, empty. Double-click to add text.');
         el.appendChild(wrapper);
         addHandles(el);
         addColorPicker(el);
         setupTextEditing(el, textarea);
-        textarea.addEventListener('input', () => fitTextToContainer(el));
+        textarea.addEventListener('input', () => {
+            fitTextToContainer(el);
+            const content = textarea.value.trim();
+            el.setAttribute('aria-label', content ? `Shape: "${content}"` : 'Shape, empty. Double-click to add text.');
+        });
         setTimeout(() => fitTextToContainer(el), 10);
         announcePolite('Shape created.');
 
@@ -681,7 +707,11 @@ function spawnObject(type, x, y, opts = {}) {
         textarea.placeholder = 'Add text...';
         el.setAttribute('tabindex', '0');
         el.setAttribute('role', 'textbox');
-        el.setAttribute('aria-label', 'Text box. Double-click to edit.');
+        el.setAttribute('aria-label', 'Text box, empty. Double-click to edit.');
+        textarea.addEventListener('input', () => {
+            const content = textarea.value.trim();
+            el.setAttribute('aria-label', content ? `Text box: "${content}"` : 'Text box, empty. Double-click to edit.');
+        });
         el.appendChild(wrapper);
         setupTextEditing(el, textarea);
         announcePolite('Text box created.');
@@ -691,12 +721,19 @@ function spawnObject(type, x, y, opts = {}) {
         el.classList.add('frame-box');
         el.setAttribute('tabindex', '0');
         el.setAttribute('role', 'group');
-        el.setAttribute('aria-label', 'Frame container');
         const title = document.createElement('div');
         title.className = 'frame-title';
         title.innerText = 'New Frame';
         title.setAttribute('aria-hidden', 'true');
         el.appendChild(title);
+        el.setAttribute('aria-label', `Frame: "${title.innerText}"`);
+        // Keep aria-label in sync if title changes via contentEditable / future editing
+        const updateFrameLabel = () => {
+            const txt = title.textContent.trim();
+            el.setAttribute('aria-label', txt ? `Frame: "${txt}"` : 'Frame, untitled');
+        };
+        const titleObserver = new MutationObserver(updateFrameLabel);
+        titleObserver.observe(title, { characterData: true, childList: true, subtree: true });
         announcePolite('Frame created.');
     }
 
@@ -1166,8 +1203,9 @@ function renderSidebar(configKey) {
     tools.forEach((tool, index) => {
         const btn = document.createElement('button');
         btn.className = 'icon-btn tool-btn';
-        if (index === 0) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
-        else { btn.setAttribute('aria-pressed', 'false'); }
+        btn.setAttribute('role', 'radio');
+        if (index === 0) { btn.classList.add('active'); btn.setAttribute('aria-checked', 'true'); }
+        else { btn.setAttribute('aria-checked', 'false'); }
         btn.dataset.tool = tool.id;
         btn.title = tool.title || tool.label || tool.id;
         if (tool.iconSrc) {
@@ -1178,12 +1216,7 @@ function renderSidebar(configKey) {
         } else {
             btn.innerText = tool.icon;
         }
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            activeTool = e.currentTarget.dataset.tool;
-            viewport.style.cursor = activeTool === 'select' ? 'grab' : 'crosshair';
-        });
+        btn.addEventListener('click', (e) => activateToolBtn(e.currentTarget));
 
         btn.setAttribute('aria-label', btn.title);
         sidebar.appendChild(btn);
@@ -1220,13 +1253,20 @@ continueBtn.addEventListener('click', () => {
         modalHeader.classList.add('hidden');
         stepCustomName.classList.remove('hidden');
         document.getElementById('toolbar-name-input').focus();
+        announceStep('step-custom-name');
     } else {
         if (selectedConfig === 'custom') renderSidebarFromDraft();
         step2.classList.remove('hidden');
+        announceStep('step-2');
     }
 });
 
 document.getElementById('cancel-custom-name-btn').addEventListener('click', () => {
+    // If launched from the accessibility menu, close the modal entirely
+    if (modalEntryPoint === 'menu') {
+        closeOnboardingAndReturnToBoard();
+        return;
+    }
     stepCustomName.classList.add('hidden');
     modalHeader.classList.remove('hidden');
     step1.classList.remove('hidden');
@@ -1236,6 +1276,7 @@ document.getElementById('cancel-custom-name-btn').addEventListener('click', () =
     } else if (selectedConfig && selectedConfig !== 'custom') {
         renderSidebar(selectedConfig);
     }
+    announceStep('step-1');
 });
 
 // --- CUSTOMIZE CREATION TOOLBAR STEP ---
@@ -1276,6 +1317,10 @@ function renderToolRows() {
         row.setAttribute('draggable', 'true');
         row.setAttribute('role', 'option');
         row.setAttribute('aria-selected', tool.enabled ? 'true' : 'false');
+        row.setAttribute('aria-describedby', 'tool-row-help');
+        // Accessible name: "<tool name>, <position> of <total>"
+        // The "tool-row-help" element supplies the keyboard instructions after the name.
+        row.setAttribute('aria-label', `${tool.label}, ${idx + 1} of ${creationToolbarDraft.length}`);
 
         // Toggle checkbox — not separately tabbable; row owns focus
         const toggle = document.createElement('button');
@@ -1284,7 +1329,7 @@ function renderToolRows() {
         toggle.className = 'tool-toggle-btn ' + (tool.enabled ? 'is-enabled' : 'is-disabled');
         toggle.setAttribute('role', 'checkbox');
         toggle.setAttribute('aria-checked', tool.enabled ? 'true' : 'false');
-        toggle.setAttribute('aria-label', tool.label);
+        // toggle.setAttribute('aria-label', tool.label);
         toggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5L10 17.5L19 8.5" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         toggle.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1311,7 +1356,7 @@ function renderToolRows() {
         const handle = document.createElement('button');
         handle.type = 'button';
         handle.className = 'tool-drag-handle';
-        handle.setAttribute('aria-label', 'Drag to reorder ' + tool.label);
+        // handle.setAttribute('aria-label', 'Drag to reorder ' + tool.label);
         handle.tabIndex = -1;
         handle.textContent = '☰';
         row.appendChild(handle);
@@ -1336,19 +1381,17 @@ function renderSidebarFromDraft() {
     enabled.forEach((tool, index) => {
         const btn = document.createElement('button');
         btn.className = 'icon-btn tool-btn';
-        if (index === 0) btn.classList.add('active');
+        btn.setAttribute('role', 'radio');
+        if (index === 0) { btn.classList.add('active'); btn.setAttribute('aria-checked', 'true'); }
+        else { btn.setAttribute('aria-checked', 'false'); }
         btn.dataset.tool = tool.id;
         btn.title = tool.title;
+        btn.setAttribute('aria-label', tool.title);
         const img = document.createElement('img');
         img.src = tool.iconSrc;
         img.alt = '';
         btn.appendChild(img);
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            activeTool = e.currentTarget.dataset.tool;
-            viewport.style.cursor = activeTool === 'select' ? 'grab' : 'crosshair';
-        });
+        btn.addEventListener('click', (e) => activateToolBtn(e.currentTarget));
         sidebar.appendChild(btn);
     });
 }
@@ -1414,6 +1457,7 @@ function toggleTool(toolId) {
     // Restore focus on the same row
     const row = customizeToolsList.querySelector(`[data-tool-id="${toolId}"]`);
     if (row) row.focus();
+    announcePolite(`${tool.label} ${tool.enabled ? 'added to' : 'removed from'} toolbar.`);
 }
 
 function moveTool(fromIndex, toIndex) {
@@ -1424,6 +1468,7 @@ function moveTool(fromIndex, toIndex) {
     renderSidebarFromDraft();
     const row = customizeToolsList.querySelector(`[data-tool-id="${moved.id}"]`);
     if (row) row.focus();
+    announcePolite(`${moved.label} moved to position ${toIndex + 1} of ${creationToolbarDraft.length}.`);
 }
 
 // --- Drag and drop ---
@@ -1475,6 +1520,8 @@ function onRowDrop(e) {
     renderSidebarFromDraft();
     const movedRow = customizeToolsList.querySelector(`[data-tool-id="${moved.id}"]`);
     if (movedRow) movedRow.focus();
+    const finalIdx = creationToolbarDraft.findIndex(t => t.id === moved.id);
+    announcePolite(`${moved.label} moved to position ${finalIdx + 1} of ${creationToolbarDraft.length}.`);
 }
 
 function onRowDragEnd(e) {
@@ -1523,6 +1570,7 @@ function enterCustomizeStep(fromStep) {
     stepCustomizeCreation.classList.remove('hidden');
     const first = customizeToolsList.firstElementChild;
     if (first) first.focus();
+    announceStep('step-customize-creation');
 }
 
 document.getElementById('continue-custom-name-btn').addEventListener('click', () => {
@@ -1538,6 +1586,7 @@ document.getElementById('customize-back-btn').addEventListener('click', (e) => {
     stepCustomizeCreation.classList.add('hidden');
     stepCustomName.classList.remove('hidden');
     document.getElementById('toolbar-name-input').focus();
+    announceStep('step-custom-name');
 });
 
 document.getElementById('reset-default-btn').addEventListener('click', () => {
@@ -1555,16 +1604,23 @@ document.getElementById('save-customize-btn').addEventListener('click', () => {
         name: enteredName,
         tools: creationToolbarDraft.map(t => ({ ...t })),
     };
+    renderCustomColumnFromSaved();
+    renderSidebarFromDraft();
+    announcePolite(`Custom toolbar "${enteredName}" saved with ${creationToolbarDraft.filter(t => t.enabled).length} tools.`);
+    // If launched from the accessibility menu, close the modal entirely
+    if (modalEntryPoint === 'menu') {
+        closeOnboardingAndReturnToBoard();
+        return;
+    }
     stepCustomizeCreation.classList.add('hidden');
     modalHeader.classList.remove('hidden');
     step1.classList.remove('hidden');
-    renderCustomColumnFromSaved();
-    renderSidebarFromDraft();
 });
 
 doneBtn.addEventListener('click', () => {
     onboardingOverlay.classList.add('hidden');
-    announcePolite('Setup complete. Board is ready. Press Tab to navigate objects, or use the toolbar to create new ones. Press ? for keyboard shortcuts.');
+    setOnboardingBackgroundInert(false);
+    announcePolite('Onboarding complete. Toolbar is now ready. Press Tab to navigate objects, or use the toolbar to create new ones. Press ? for keyboard shortcuts.');
     // Focus the first toolbar button after modal closes
     setTimeout(() => sidebar.querySelector('.tool-btn')?.focus(), 100);
 });
@@ -1572,6 +1628,7 @@ doneBtn.addEventListener('click', () => {
 document.getElementById('settings-back-btn').addEventListener('click', () => {
     step2.classList.add('hidden');
     step1.classList.remove('hidden');
+    announceStep('step-1');
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -1752,13 +1809,371 @@ function initExtendedColorPanel() {
     });
 }
 
+let stickyPanelReturnFocus = null;
 window.addEventListener('click', () => {
     if (!stickyColorPanel) return;
-    if (activeTool === 'sticky') {
+    const wasOpen = !stickyColorPanel.classList.contains('hidden');
+    const shouldOpen = activeTool === 'sticky';
+    if (shouldOpen && !wasOpen) {
+        stickyPanelReturnFocus = document.activeElement;
         stickyColorPanel.classList.remove('hidden');
-    } else {
+        const firstSwatch = stickyColorPanel.querySelector('.sticky-color-swatch');
+        if (firstSwatch) firstSwatch.focus();
+        announcePolite('Sticky note colour picker opened. Use Tab and Enter to choose a colour.');
+    } else if (!shouldOpen && wasOpen) {
         stickyColorPanel.classList.add('hidden');
+        if (stickyPanelReturnFocus && document.contains(stickyPanelReturnFocus)) {
+            stickyPanelReturnFocus.focus();
+        }
+        stickyPanelReturnFocus = null;
     }
 });
 
 initExtendedColorPanel();
+
+// Step-2 toggle change announcements + sync with the accessibility menu mirrors
+document.querySelectorAll('#step-2 .toggle-switch input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', () => {
+        const labelId = input.getAttribute('aria-labelledby');
+        const labelEl = labelId && document.getElementById(labelId);
+        const name = labelEl ? labelEl.textContent.trim() : 'Setting';
+        announcePolite(`${name} turned ${input.checked ? 'on' : 'off'}.`);
+        if (typeof syncMenuTogglesFromSettings === 'function') syncMenuTogglesFromSettings();
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// 17. ACCESSIBILITY MENU
+// ─────────────────────────────────────────────────────────────────
+const a11yMenuBtn = document.getElementById('a11y-menu-btn');
+const a11yMenu = document.getElementById('a11y-menu');
+const a11ySubmenuToolbars = document.getElementById('a11y-submenu-toolbars');
+const a11ySubmenuSr = document.getElementById('a11y-submenu-sr');
+let modalEntryPoint = null; // null | 'menu' | 'onboarding'
+
+// ----- positioning -----
+function positionA11yMenu() {
+    const r = a11yMenuBtn.getBoundingClientRect();
+    // Drop the menu directly under the trigger, aligning roughly with the board title position
+    a11yMenu.style.top = `${r.bottom + 8}px`;
+    a11yMenu.style.left = `${r.left - 60}px`;
+}
+function positionSubmenuFor(triggerEl, submenuEl) {
+    const r = triggerEl.getBoundingClientRect();
+    const menuR = a11yMenu.getBoundingClientRect();
+    submenuEl.style.top = `${r.top}px`;
+    submenuEl.style.left = `${menuR.right + 6}px`;
+}
+
+// ----- focusable items inside a menu -----
+function getMenuItems(container) {
+    return Array.from(container.querySelectorAll(':scope > .a11y-menu-item'));
+}
+function setRovingFocus(container, target) {
+    const items = getMenuItems(container);
+    items.forEach(it => it.setAttribute('tabindex', it === target ? '0' : '-1'));
+    if (target) target.focus();
+}
+
+// ----- open / close -----
+function openA11yMenu() {
+    positionA11yMenu();
+    a11yMenu.classList.remove('hidden');
+    a11yMenuBtn.setAttribute('aria-expanded', 'true');
+    const items = getMenuItems(a11yMenu);
+    setRovingFocus(a11yMenu, items[0]);
+}
+function closeAllSubmenus() {
+    [a11ySubmenuToolbars, a11ySubmenuSr].forEach(sub => {
+        if (!sub) return;
+        sub.classList.add('hidden');
+        const trig = document.getElementById(sub.getAttribute('aria-labelledby'));
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    });
+}
+function closeA11yMenu(returnFocus = true) {
+    closeAllSubmenus();
+    a11yMenu.classList.add('hidden');
+    a11yMenuBtn.setAttribute('aria-expanded', 'false');
+    if (returnFocus) a11yMenuBtn.focus();
+}
+function openSubmenu(triggerEl) {
+    const submenuId = triggerEl.getAttribute('aria-controls');
+    const submenu = document.getElementById(submenuId);
+    if (!submenu) return;
+    // Close any other open submenu first
+    [a11ySubmenuToolbars, a11ySubmenuSr].forEach(sub => {
+        if (sub && sub !== submenu) {
+            sub.classList.add('hidden');
+            const otherTrig = document.getElementById(sub.getAttribute('aria-labelledby'));
+            if (otherTrig) otherTrig.setAttribute('aria-expanded', 'false');
+        }
+    });
+    if (submenuId === 'a11y-submenu-toolbars') renderToolbarSubmenu();
+    positionSubmenuFor(triggerEl, submenu);
+    submenu.classList.remove('hidden');
+    triggerEl.setAttribute('aria-expanded', 'true');
+    const items = getMenuItems(submenu);
+    setRovingFocus(submenu, items[0]);
+}
+function closeSubmenu(submenuEl, returnFocus = true) {
+    if (!submenuEl || submenuEl.classList.contains('hidden')) return;
+    submenuEl.classList.add('hidden');
+    const trig = document.getElementById(submenuEl.getAttribute('aria-labelledby'));
+    if (trig) {
+        trig.setAttribute('aria-expanded', 'false');
+        if (returnFocus) {
+            const mainItems = getMenuItems(a11yMenu);
+            mainItems.forEach(it => it.setAttribute('tabindex', it === trig ? '0' : '-1'));
+            trig.focus();
+        }
+    }
+}
+
+// ----- trigger button -----
+a11yMenuBtn.addEventListener('click', () => {
+    if (a11yMenu.classList.contains('hidden')) openA11yMenu();
+    else closeA11yMenu();
+});
+a11yMenuBtn.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openA11yMenu();
+    }
+});
+
+// ----- submenu trigger clicks -----
+document.querySelectorAll('#a11y-menu .submenu-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const submenuId = trigger.getAttribute('aria-controls');
+        const submenu = document.getElementById(submenuId);
+        if (submenu && !submenu.classList.contains('hidden')) {
+            closeSubmenu(submenu, false);
+        } else {
+            openSubmenu(trigger);
+        }
+    });
+});
+
+// ----- keyboard navigation inside menus -----
+function handleMenuKeydown(container, e) {
+    const items = getMenuItems(container);
+    const idx = items.indexOf(document.activeElement);
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            setRovingFocus(container, items[(idx + 1) % items.length]);
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            setRovingFocus(container, items[(idx - 1 + items.length) % items.length]);
+            break;
+        case 'Home':
+            e.preventDefault();
+            setRovingFocus(container, items[0]);
+            break;
+        case 'End':
+            e.preventDefault();
+            setRovingFocus(container, items[items.length - 1]);
+            break;
+        case 'Escape':
+            e.preventDefault();
+            if (container === a11yMenu) closeA11yMenu();
+            else closeSubmenu(container);
+            break;
+        case 'ArrowRight':
+            if (container === a11yMenu && document.activeElement.classList.contains('submenu-trigger')) {
+                e.preventDefault();
+                openSubmenu(document.activeElement);
+            }
+            break;
+        case 'ArrowLeft':
+            if (container !== a11yMenu) {
+                e.preventDefault();
+                closeSubmenu(container);
+            }
+            break;
+        case 'Enter':
+        case ' ':
+            e.preventDefault();
+            document.activeElement.click();
+            break;
+    }
+}
+a11yMenu.addEventListener('keydown', (e) => handleMenuKeydown(a11yMenu, e));
+a11ySubmenuToolbars.addEventListener('keydown', (e) => handleMenuKeydown(a11ySubmenuToolbars, e));
+a11ySubmenuSr.addEventListener('keydown', (e) => handleMenuKeydown(a11ySubmenuSr, e));
+
+// ----- click outside closes everything -----
+document.addEventListener('click', (e) => {
+    if (a11yMenu.classList.contains('hidden')) return;
+    if (a11yMenuBtn.contains(e.target)) return;
+    if (a11yMenu.contains(e.target)) return;
+    if (a11ySubmenuToolbars.contains(e.target)) return;
+    if (a11ySubmenuSr.contains(e.target)) return;
+    closeA11yMenu(false);
+});
+
+// ----- toggle sync (menu ↔ step-2) -----
+function getSettingInput(id) {
+    const h4 = document.getElementById(id);
+    return h4 && h4.closest('.setting-card') ? h4.closest('.setting-card').querySelector('input[type="checkbox"]') : null;
+}
+function syncMenuTogglesFromSettings() {
+    document.querySelectorAll('.a11y-toggle-row[data-mirrors]').forEach(row => {
+        const input = getSettingInput(row.dataset.mirrors);
+        if (input) row.setAttribute('aria-checked', input.checked ? 'true' : 'false');
+    });
+}
+
+document.querySelectorAll('.a11y-toggle-row').forEach(row => {
+    const activate = () => {
+        const next = row.getAttribute('aria-checked') !== 'true';
+        row.setAttribute('aria-checked', String(next));
+        const mirrorId = row.dataset.mirrors;
+        if (mirrorId) {
+            const input = getSettingInput(mirrorId);
+            if (input && input.checked !== next) {
+                input.checked = next;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            // Mirror across menu copies (main + sr submenu)
+            document.querySelectorAll(`.a11y-toggle-row[data-mirrors="${mirrorId}"]`).forEach(r => {
+                r.setAttribute('aria-checked', String(next));
+            });
+        } else {
+            announcePolite(`${row.querySelector('.a11y-menu-label').textContent.trim()} turned ${next ? 'on' : 'off'}.`);
+        }
+    };
+    row.addEventListener('click', activate);
+});
+
+// ----- toolbar submenu rendering -----
+function renderToolbarSubmenu() {
+    a11ySubmenuToolbars.innerHTML = '';
+    const make = (config, label) => {
+        const row = document.createElement('div');
+        row.className = 'a11y-menu-item a11y-radio-row';
+        row.setAttribute('role', 'menuitemradio');
+        row.setAttribute('tabindex', '-1');
+        row.setAttribute('aria-checked', selectedConfig === config ? 'true' : 'false');
+        row.dataset.config = config;
+        row.innerHTML = `<span class="a11y-menu-label"></span><span class="a11y-radio-dot" aria-hidden="true"></span>`;
+        row.querySelector('.a11y-menu-label').textContent = label;
+        row.addEventListener('click', () => pickToolbarConfig(config));
+        return row;
+    };
+    a11ySubmenuToolbars.appendChild(make('simple', 'Simple'));
+    a11ySubmenuToolbars.appendChild(make('default', 'Default'));
+    if (savedCustomToolbar) {
+        a11ySubmenuToolbars.appendChild(make('custom', `${savedCustomToolbar.name} (custom)`));
+    }
+    const divider = document.createElement('div');
+    divider.className = 'a11y-menu-divider';
+    divider.setAttribute('role', 'separator');
+    a11ySubmenuToolbars.appendChild(divider);
+
+    const actionBtn = document.createElement('button');
+    actionBtn.type = 'button';
+    actionBtn.className = 'a11y-menu-item';
+    actionBtn.setAttribute('role', 'menuitem');
+    actionBtn.id = 'a11y-toolbar-action-btn';
+    actionBtn.setAttribute('tabindex', '-1');
+    actionBtn.textContent = savedCustomToolbar
+        ? `Edit ${savedCustomToolbar.name}`
+        : 'Create custom toolbar';
+    actionBtn.addEventListener('click', openCustomFlowFromMenu);
+    a11ySubmenuToolbars.appendChild(actionBtn);
+}
+
+function pickToolbarConfig(configKey) {
+    selectedConfig = configKey;
+    renderSidebar(configKey);
+    // Keep step-1 select buttons in sync
+    selectBtns.forEach(b => {
+        const matches = b.getAttribute('data-config') === configKey;
+        b.classList.toggle('selected', matches);
+        const orig = b.getAttribute('data-original-text');
+        if (!matches && orig) b.innerText = orig;
+        if (matches) {
+            if (!b.getAttribute('data-original-text')) b.setAttribute('data-original-text', b.innerText);
+            b.innerText = '✓ Selected';
+        }
+    });
+    continueBtn.disabled = false;
+    a11ySubmenuToolbars.querySelectorAll('[role="menuitemradio"]').forEach(r => {
+        r.setAttribute('aria-checked', r.dataset.config === configKey ? 'true' : 'false');
+    });
+    const niceName = configKey === 'custom' && savedCustomToolbar
+        ? savedCustomToolbar.name
+        : configKey.charAt(0).toUpperCase() + configKey.slice(1);
+    announcePolite(`${niceName} toolbar selected.`);
+}
+
+// ----- open custom flow from menu (Edit / Create) -----
+function openCustomFlowFromMenu() {
+    modalEntryPoint = 'menu';
+    closeA11yMenu(false);
+    onboardingOverlay.classList.remove('hidden');
+    setOnboardingBackgroundInert(true);
+    step1.classList.add('hidden');
+    step2.classList.add('hidden');
+    stepCustomizeCreation.classList.add('hidden');
+    modalHeader.classList.add('hidden');
+    stepCustomName.classList.remove('hidden');
+    const nameInput = document.getElementById('toolbar-name-input');
+    if (savedCustomToolbar) nameInput.value = savedCustomToolbar.name;
+    nameInput.focus();
+    announceStep('step-custom-name');
+}
+
+// ----- shared close handler for menu-launched modal -----
+function closeOnboardingAndReturnToBoard() {
+    onboardingOverlay.classList.add('hidden');
+    modalHeader.classList.remove('hidden');
+    step1.classList.remove('hidden');
+    stepCustomName.classList.add('hidden');
+    stepCustomizeCreation.classList.add('hidden');
+    step2.classList.add('hidden');
+    setOnboardingBackgroundInert(false);
+    modalEntryPoint = null;
+    a11yMenuBtn.focus();
+    announcePolite('Returned to board.');
+}
+
+// ----- "Accessibility Onboarding" menu item -----
+document.getElementById('a11y-onboarding-btn').addEventListener('click', () => {
+    modalEntryPoint = 'onboarding';
+    closeA11yMenu(false);
+    onboardingOverlay.classList.remove('hidden');
+    setOnboardingBackgroundInert(true);
+    modalHeader.classList.remove('hidden');
+    step1.classList.remove('hidden');
+    stepCustomName.classList.add('hidden');
+    stepCustomizeCreation.classList.add('hidden');
+    step2.classList.add('hidden');
+    if (savedCustomToolbar) renderCustomColumnFromSaved();
+    setTimeout(() => document.getElementById('onboarding-title').focus(), 50);
+    announceStep('step-1');
+});
+
+// ----- Accessibility Checker stub -----
+document.getElementById('a11y-checker-btn').addEventListener('click', () => {
+    announcePolite('Accessibility Checker is not yet available.');
+});
+
+// Initialize menu state
+syncMenuTogglesFromSettings();
+
+// On initial load, move focus into the onboarding dialog and announce step 1
+if (onboardingOverlay && !onboardingOverlay.classList.contains('hidden')) {
+    const title = document.getElementById('onboarding-title');
+    if (title) {
+        // Small delay so AT picks up the dialog first
+        setTimeout(() => {
+            title.focus();
+            announceStep('step-1');
+        }, 50);
+    }
+}

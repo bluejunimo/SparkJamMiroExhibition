@@ -14,31 +14,110 @@
 <body>
 
     <!-- Infinite Viewport -->
-    <div id="viewport" role="application" aria-label="Miro board canvas. Use Tab to navigate objects, Enter to edit, Escape to stop editing.">
-        <!-- The Board contains all objects and the SVG layer -->
-        <div id="board">
-            <svg id="svg-canvas" style="position:absolute; width:100%; height:100%; pointer-events:none; overflow:visible;">
-                <defs>
-                    <marker id="arrowhead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6"
-                        orient="auto-start-reverse">
-                        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#050038" />
-                    </marker>
-                </defs>
-                <g id="paths"></g>
-                <g id="drawings"></g>
-            </svg>
+    <main id="viewport-wrap" aria-label="Board canvas" inert>
+        <div id="viewport" role="application" aria-label="Miro board canvas. Use Tab to navigate objects, Enter to edit, Escape to stop editing.">
+            <!-- The Board contains all objects and the SVG layer -->
+            <div id="board">
+                <svg id="svg-canvas" style="position:absolute; width:100%; height:100%; pointer-events:none; overflow:visible;">
+                    <defs>
+                        <marker id="arrowhead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6"
+                            orient="auto-start-reverse">
+                            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#050038" />
+                        </marker>
+                    </defs>
+                    <g id="paths"></g>
+                    <g id="drawings"></g>
+                </svg>
 
-            <div id="html-layer">
-                <!-- Stickies, Shapes, Frames, and Text will be injected here -->
+                <div id="html-layer">
+                    <!-- Stickies, Shapes, Frames, and Text will be injected here -->
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- UI Overlays -->
-    <div class="toolbar top-left" role="banner">
+    <div class="toolbar top-left" role="banner" inert>
         <div class="logo" aria-label="Miro">miro</div>
         <div class="divider" aria-hidden="true"></div>
-        <div class="board-title">🧠 brainstorming board</div>
+        <div class="board-title"><span aria-hidden="true">🧠</span> brainstorming board</div>
+        <button id="a11y-menu-btn" class="a11y-menu-trigger" type="button"
+                aria-label="Accessibility menu" aria-haspopup="menu" aria-expanded="false"
+                aria-controls="a11y-menu">
+            <img src="img/icons/accessbility.svg" alt="">
+        </button>
+        <button id="kebab-btn" class="kebab-btn" type="button" aria-label="More board options">
+            <span aria-hidden="true">⋮</span>
+        </button>
+    </div>
+
+    <!-- Accessibility menu (popover) -->
+    <div id="a11y-menu" class="a11y-menu hidden" role="menu" aria-labelledby="a11y-menu-btn">
+        <button class="a11y-menu-item submenu-trigger" role="menuitem" type="button"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="a11y-submenu-toolbars"
+                id="a11y-trigger-toolbars">
+            <span class="a11y-menu-label">Toolbars</span>
+            <span class="a11y-menu-chevron" aria-hidden="true">›</span>
+        </button>
+        <button class="a11y-menu-item submenu-trigger" role="menuitem" type="button"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="a11y-submenu-sr"
+                id="a11y-trigger-sr">
+            <span class="a11y-menu-label">Screen reader settings</span>
+            <span class="a11y-menu-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <div class="a11y-menu-item a11y-toggle-row" role="menuitemcheckbox" tabindex="-1"
+             data-decorative="single-char" aria-checked="true">
+            <span class="a11y-menu-label">Single character shortcuts</span>
+            <span class="a11y-menu-switch" aria-hidden="true"></span>
+        </div>
+        <div class="a11y-menu-item a11y-toggle-row" role="menuitemcheckbox" tabindex="-1"
+             data-decorative="reduce-motion" aria-checked="false">
+            <span class="a11y-menu-label">Reduce motion</span>
+            <span class="a11y-menu-switch" aria-hidden="true"></span>
+        </div>
+        <div class="a11y-menu-item a11y-toggle-row" role="menuitemcheckbox" tabindex="-1"
+             data-decorative="precise-selection" aria-checked="false">
+            <span class="a11y-menu-label">Precise selection</span>
+            <span class="a11y-menu-switch" aria-hidden="true"></span>
+        </div>
+
+        <div class="a11y-menu-divider" role="separator"></div>
+
+        <button class="a11y-menu-item a11y-icon-item" role="menuitem" type="button"
+                id="a11y-checker-btn" tabindex="-1">
+            <img src="img/icons/accessbility.svg" alt="" class="a11y-menu-icon">
+            <span class="a11y-menu-label">Accessibility Checker</span>
+        </button>
+        <button class="a11y-menu-item a11y-icon-item" role="menuitem" type="button"
+                id="a11y-onboarding-btn" tabindex="-1">
+            <img src="img/icons/accessbility.svg" alt="" class="a11y-menu-icon">
+            <span class="a11y-menu-label">Accessibility Onboarding</span>
+        </button>
+    </div>
+
+    <!-- Toolbar submenu (rebuilt dynamically) -->
+    <div id="a11y-submenu-toolbars" class="a11y-submenu hidden" role="menu"
+         aria-labelledby="a11y-trigger-toolbars"></div>
+
+    <!-- Screen reader settings submenu -->
+    <div id="a11y-submenu-sr" class="a11y-submenu hidden" role="menu"
+         aria-labelledby="a11y-trigger-sr">
+        <div class="a11y-menu-item a11y-toggle-row" role="menuitemcheckbox" tabindex="-1"
+             data-mirrors="setting-alt-text" aria-checked="true">
+            <span class="a11y-menu-label">Automatically Read alt-text</span>
+            <span class="a11y-menu-switch" aria-hidden="true"></span>
+        </div>
+        <div class="a11y-menu-item a11y-toggle-row" role="menuitemcheckbox" tabindex="-1"
+             data-mirrors="setting-sr-shortcuts" aria-checked="true">
+            <span class="a11y-menu-label">Contextual shortcuts</span>
+            <span class="a11y-menu-switch" aria-hidden="true"></span>
+        </div>
+        <div class="a11y-menu-item a11y-toggle-row" role="menuitemcheckbox" tabindex="-1"
+             data-mirrors="setting-spatial" aria-checked="true">
+            <span class="a11y-menu-label">Spatial creation shortcuts</span>
+            <span class="a11y-menu-switch" aria-hidden="true"></span>
+        </div>
     </div>
 
     <!-- Screen Reader Live Region (always present) -->
@@ -46,7 +125,7 @@
     <div id="sr-polite" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
     <!-- Keyboard Shortcuts Button (bottom right) -->
-    <button id="shortcuts-toggle-btn" aria-label="Show keyboard shortcuts" aria-expanded="false" aria-controls="shortcuts-panel" title="Keyboard shortcuts (?)">
+    <button id="shortcuts-toggle-btn" aria-label="Show keyboard shortcuts" aria-expanded="false" aria-controls="shortcuts-panel" title="Keyboard shortcuts (?)" inert>
         <span aria-hidden="true">?</span>
         <span class="shortcuts-btn-label">Shortcuts</span>
     </button>
@@ -55,7 +134,7 @@
     <div id="shortcuts-panel" class="hidden" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts reference">
         <div class="shortcuts-panel-header">
             <h2>Keyboard Shortcuts</h2>
-            <button id="shortcuts-close-btn" aria-label="Close shortcuts panel">✕</button>
+            <button id="shortcuts-close-btn" aria-label="Close shortcuts panel"><span aria-hidden="true">✕</span></button>
         </div>
 
         <div class="shortcuts-section">
@@ -63,6 +142,12 @@
                 <span class="section-icon" aria-hidden="true">🧭</span> Navigation &amp; Canvas
             </h3>
             <table class="shortcuts-table" aria-label="Navigation shortcuts">
+                <thead>
+                    <tr>
+                        <th scope="col">Action</th>
+                        <th scope="col">Shortcut</th>
+                    </tr>
+                </thead>
                 <tbody>
                     <tr>
                         <td>Pan canvas</td>
@@ -93,6 +178,12 @@
                 <span class="section-icon" aria-hidden="true">✏️</span> Creation Tools
             </h3>
             <table class="shortcuts-table" aria-label="Creation tool shortcuts">
+                <thead>
+                    <tr>
+                        <th scope="col">Action</th>
+                        <th scope="col">Shortcut</th>
+                    </tr>
+                </thead>
                 <tbody>
                     <tr>
                         <td>Text</td>
@@ -136,6 +227,12 @@
                 <span class="new-badge">New</span>
             </h3>
             <table class="shortcuts-table" aria-label="Accessibility shortcuts">
+                <thead>
+                    <tr>
+                        <th scope="col">Action</th>
+                        <th scope="col">Shortcut</th>
+                    </tr>
+                </thead>
                 <tbody>
                     <tr>
                         <td>Describe selected object</td>
@@ -180,28 +277,28 @@
     </div>
 
     <!-- Left Dynamic Sidebar with New Tools -->
-    <nav class="toolbar left-vertical" id="sidebar" aria-label="Board tools">
-        <button class="icon-btn tool-btn active" data-tool="select" title="Select (V)"><img src="img/icons/arrow.svg" alt="" aria-pressed="true"></button>
-        <button class="icon-btn tool-btn" data-tool="text" title="Text (T)"><img src="img/icons/text.svg" alt="" aria-pressed="false"></button>
-        <button class="icon-btn tool-btn" data-tool="sticky" title="Sticky Note (N)"><img src="img/icons/sticky.svg" alt="" aria-pressed="false"></button>
-        <button class="icon-btn tool-btn" data-tool="shape" title="Shape (S)"><img src="img/icons/shapes.svg" alt=""></button>
-        <button class="icon-btn tool-btn" data-tool="pen" title="Pen (P)"><img src="img/icons/pen.svg" alt="" aria-pressed="false"></button>
-        <button class="icon-btn tool-btn" data-tool="frame" title="Frame (F)"><img src="img/icons/frame.svg" alt="" aria-pressed="false"></button>
+    <nav class="toolbar left-vertical" id="sidebar" role="radiogroup" aria-label="Board tools" inert>
+        <button class="icon-btn tool-btn active" data-tool="select" role="radio" aria-checked="true" aria-label="Select tool (V)" title="Select (V)"><img src="img/icons/arrow.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="text" role="radio" aria-checked="false" aria-label="Text tool (T)" title="Text (T)"><img src="img/icons/text.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="sticky" role="radio" aria-checked="false" aria-label="Sticky Note tool (N)" title="Sticky Note (N)"><img src="img/icons/sticky.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="shape" role="radio" aria-checked="false" aria-label="Shape tool (S)" title="Shape (S)"><img src="img/icons/shapes.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="pen" role="radio" aria-checked="false" aria-label="Pen tool (P)" title="Pen (P)"><img src="img/icons/pen.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="frame" role="radio" aria-checked="false" aria-label="Frame tool (F)" title="Frame (F)"><img src="img/icons/frame.svg" alt=""></button>
     </nav>
 
-    <div id="sticky-color-panel" class="hidden" role="dialog" aria-label="Sticky note colour picker">
+    <div id="sticky-color-panel" class="hidden" role="dialog" aria-modal="true" aria-label="Sticky note colour picker">
         <div class="color-grid" id="color-grid-container"></div>
         <button class="panel-action-btn"><span class="btn-icon" aria-hidden="true">✦</span> Generate</button>
         <button class="panel-action-btn"><span class="btn-icon" aria-hidden="true">🗂</span> Stack</button>
     </div>
 
     <!-- ONBOARDING MODAL -->
-    <div id="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <div id="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" aria-describedby="onboarding-desc">
         <div class="onboarding-modal">
             <div class="modal-header">
                 <div class="modal-logo" aria-hidden="true"><span>\\</span> miro</div>
-                <h2 id="onboarding-title">Accessibility Settings</h2>
-                <p>Set up Miro how you want to use it.</p>
+                <h2 id="onboarding-title" tabindex="-1">Accessibility Settings</h2>
+                <p id="onboarding-desc">Set up Miro how you want to use it.</p>
             </div>
 
             <!-- STEP 1 -->
@@ -222,7 +319,7 @@
                             <span class="add-btn">+</span>
                         </div>
                         <p class="desc">Best for screen readers. 6 creation tools and hides visual presentation tools.</p>
-                        <a href="#" class="link">Show creation tools</a>
+                        <button type="button" class="link link-button">Show creation tools</button>
                         <button class="select-tool-btn" data-config="simple">Choose preferred toolbar</button>
                     </div>
 
@@ -244,7 +341,7 @@
                             <span class="add-btn">+</span>
                         </div>
                         <p class="desc">11 creation tools; other tools available in submenu.</p>
-                        <a href="#" class="link">Show creation tools</a>
+                        <button type="button" class="link link-button">Show creation tools</button>
                         <button class="select-tool-btn" data-config="default">Choose default toolbar</button>
                     </div>
 
@@ -257,10 +354,10 @@
                             <span class="add-btn">+</span>
                         </div>
                         <p class="desc">Choose which tools are easily accessible.</p>
-                        <a href="#" class="link" id="show-tools-link">Show 34 available tools</a>
+                        <button type="button" class="link link-button" id="show-tools-link">Show 34 available tools</button>
                         <div class="custom-select-row">
                             <button class="select-tool-btn" data-config="custom" id="custom-toolbar-btn">Create custom toolbar</button>
-                            <button class="edit-custom-btn hidden" id="edit-custom-btn" aria-label="Edit custom toolbar" title="Edit custom toolbar">&#9998;</button>
+                            <button class="edit-custom-btn hidden" id="edit-custom-btn" aria-label="Edit custom toolbar" title="Edit custom toolbar"><span aria-hidden="true">&#9998;</span></button>
                         </div>
                     </div>
                 </div>
@@ -292,6 +389,7 @@
                 <p class="customize-subtitle">The creation toolbar helps you add sticky notes, frames, templates, and other objects to the board.</p>
 
                 <div class="customize-layout">
+                    <span id="tool-row-help" class="sr-only">Press Enter or Space to toggle on or off. Use Up or Down Arrow to reorder.</span>
                     <div class="customize-tools-list" id="customize-tools-list" role="listbox" aria-label="Creation toolbar tools">
                         <!-- rows rendered dynamically -->
                     </div>
@@ -326,34 +424,34 @@
                     <div class="setting-card">
                         <div class="setting-icon" aria-hidden="true">🗣️</div>
                         <div class="setting-text">
-                            <h4>Contextual screen reader shortcuts</h4>
-                            <p><kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">I</kbd>: Voice details about selected object. &nbsp;<kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">D</kbd>: Voice board details.</p>
+                            <h4 id="setting-sr-shortcuts">Contextual screen reader shortcuts</h4>
+                            <p id="setting-sr-shortcuts-desc"><kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">I</kbd>: Voice details about selected object. &nbsp;<kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">D</kbd>: Voice board details.</p>
                         </div>
-                        <label class="toggle-switch" aria-label="Enable contextual screen reader shortcuts">
-                            <input type="checkbox" checked>
-                            <span class="slider"></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" aria-labelledby="setting-sr-shortcuts" aria-describedby="setting-sr-shortcuts-desc" checked>
+                            <span class="slider" aria-hidden="true"></span>
                         </label>
                     </div>
                     <div class="setting-card">
                         <div class="setting-icon" aria-hidden="true"><strong>ALT</strong></div>
                         <div class="setting-text">
-                            <h4>Automatically read alt-text</h4>
-                            <p>If turned off, read alt-text of a selected image using <kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">I</kbd>.</p>
+                            <h4 id="setting-alt-text">Automatically read alt-text</h4>
+                            <p id="setting-alt-text-desc">If turned off, read alt-text of a selected image using <kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">I</kbd>.</p>
                         </div>
-                        <label class="toggle-switch" aria-label="Enable automatically read alt-text">
-                            <input type="checkbox" checked>
-                            <span class="slider"></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" aria-labelledby="setting-alt-text" aria-describedby="setting-alt-text-desc" checked>
+                            <span class="slider" aria-hidden="true"></span>
                         </label>
                     </div>
                     <div class="setting-card">
                         <div class="setting-icon" aria-hidden="true">⌨️</div>
                         <div class="setting-text">
-                            <h4>Spatial creation shortcuts</h4>
-                            <p>Use <kbd class="inline-kbd">N</kbd> → <kbd class="inline-kbd">→</kbd> to create a note to the right, or <kbd class="inline-kbd">N</kbd> → <kbd class="inline-kbd">Shift ↓</kbd> to create and link below.</p>
+                            <h4 id="setting-spatial">Spatial creation shortcuts</h4>
+                            <p id="setting-spatial-desc">Use <kbd class="inline-kbd">N</kbd> → <kbd class="inline-kbd">→</kbd> to create a note to the right, or <kbd class="inline-kbd">N</kbd> → <kbd class="inline-kbd">Shift ↓</kbd> to create and link below.</p>
                         </div>
-                        <label class="toggle-switch" aria-label="Enable spatial creation shortcuts">
-                            <input type="checkbox" checked>
-                            <span class="slider"></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" aria-labelledby="setting-spatial" aria-describedby="setting-spatial-desc" checked>
+                            <span class="slider" aria-hidden="true"></span>
                         </label>
                     </div>
                 </div>
