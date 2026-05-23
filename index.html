@@ -276,14 +276,19 @@
         </div>
     </div>
 
-    <!-- Left Dynamic Sidebar with New Tools -->
+    <!-- Left Dynamic Sidebar with Default toolbar tools (none active until onboarding completes) -->
     <nav class="toolbar left-vertical" id="sidebar" role="radiogroup" aria-label="Board tools" inert>
-        <button class="icon-btn tool-btn active" data-tool="select" role="radio" aria-checked="true" aria-label="Select tool (V)" title="Select (V)"><img src="img/icons/arrow.svg" alt=""></button>
-        <button class="icon-btn tool-btn" data-tool="text" role="radio" aria-checked="false" aria-label="Text tool (T)" title="Text (T)"><img src="img/icons/text.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="select" role="radio" aria-checked="false" aria-label="Select tool (V)" title="Select (V)"><img src="img/icons/arrow.svg" alt=""></button>
         <button class="icon-btn tool-btn" data-tool="sticky" role="radio" aria-checked="false" aria-label="Sticky Note tool (N)" title="Sticky Note (N)"><img src="img/icons/sticky.svg" alt=""></button>
-        <button class="icon-btn tool-btn" data-tool="shape" role="radio" aria-checked="false" aria-label="Shape tool (S)" title="Shape (S)"><img src="img/icons/shapes.svg" alt=""></button>
-        <button class="icon-btn tool-btn" data-tool="pen" role="radio" aria-checked="false" aria-label="Pen tool (P)" title="Pen (P)"><img src="img/icons/pen.svg" alt=""></button>
         <button class="icon-btn tool-btn" data-tool="frame" role="radio" aria-checked="false" aria-label="Frame tool (F)" title="Frame (F)"><img src="img/icons/frame.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="template" role="radio" aria-checked="false" aria-label="Templates" title="Templates"><img src="img/icons/template.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="text" role="radio" aria-checked="false" aria-label="Text tool (T)" title="Text (T)"><img src="img/icons/text.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="shape" role="radio" aria-checked="false" aria-label="Shapes and Lines (S)" title="Shapes and Lines (S)"><img src="img/icons/shapes.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="pen" role="radio" aria-checked="false" aria-label="Pen tool (P)" title="Pen (P)"><img src="img/icons/pen.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="format" role="radio" aria-checked="false" aria-label="Formats and Flow" title="Formats and Flow"><img src="img/icons/format.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="sticker" role="radio" aria-checked="false" aria-label="Stickers, emojis and GIFs" title="Stickers, emojis and GIFs"><img src="img/icons/sticker.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="comment" role="radio" aria-checked="false" aria-label="Comment" title="Comment"><img src="img/icons/chat.svg" alt=""></button>
+        <button class="icon-btn tool-btn" data-tool="diagrams" role="radio" aria-checked="false" aria-label="Diagrams" title="Diagrams"><img src="img/icons/connect.svg" alt=""></button>
     </nav>
 
     <div id="sticky-color-panel" class="hidden" role="dialog" aria-modal="true" aria-label="Sticky note colour picker">
@@ -316,7 +321,7 @@
                             <span class="preview-tool-icon"><img src="img/icons/shapes.svg" alt=""></span>
                             <span class="preview-tool-icon"><img src="img/icons/format.svg" alt=""></span>
                             <span class="preview-tool-icon"><img src="img/icons/connect.svg" alt=""></span>
-                            <span class="add-btn">+</span>
+                            <span class="add-btn" aria-hidden="true">+</span>
                         </div>
                         <p class="desc">Best for screen readers. 6 creation tools and hides visual presentation tools.</p>
                         <button type="button" class="link link-button">Show creation tools</button>
@@ -338,7 +343,7 @@
                             <span class="preview-tool-icon"><img src="img/icons/sticker.svg" alt=""></span>
                             <span class="preview-tool-icon"><img src="img/icons/chat.svg" alt=""></span>
                             <span class="preview-tool-icon"><img src="img/icons/connect.svg" alt=""></span>
-                            <span class="add-btn">+</span>
+                            <span class="add-btn" aria-hidden="true">+</span>
                         </div>
                         <p class="desc">11 creation tools; other tools available in submenu.</p>
                         <button type="button" class="link link-button">Show creation tools</button>
@@ -351,7 +356,7 @@
                         <div class="preview-box custom-preview" id="custom-preview-box" aria-hidden="true">
                             <span class="custom-placeholder-icon">?</span>
                             <span class="custom-placeholder-icon">?</span>
-                            <span class="add-btn">+</span>
+                            <span class="add-btn" aria-hidden="true">+</span>
                         </div>
                         <p class="desc">Choose which tools are easily accessible.</p>
                         <button type="button" class="link link-button" id="show-tools-link">Show 34 available tools</button>
@@ -378,8 +383,8 @@
                     </div>
                 </div>
                 <div class="modal-footer space-between">
-                    <button id="cancel-custom-name-btn" class="cancel-link">Cancel creating new toolbar</button>
                     <button id="continue-custom-name-btn" class="continue-custom-btn">Continue to selecting your tools</button>
+                    <button id="cancel-custom-name-btn" class="cancel-link">Cancel creating new toolbar</button>
                 </div>
             </div>
 
@@ -389,8 +394,9 @@
                 <p class="customize-subtitle">The creation toolbar helps you add sticky notes, frames, templates, and other objects to the board.</p>
 
                 <div class="customize-layout">
-                    <span id="tool-row-help" class="sr-only">Press Enter or Space to toggle on or off. Use Up or Down Arrow to reorder.</span>
-                    <div class="customize-tools-list" id="customize-tools-list" role="listbox" aria-label="Creation toolbar tools">
+                    <span id="customize-tools-help" class="sr-only">Press Enter to start editing tools, then use Tab or Shift Tab to move between tools, Up or Down arrow to reorder the current tool, Enter or Space to add or remove it, and Escape to leave the list.</span>
+                    <span id="tool-row-help" class="sr-only">Press Tab or Shift Tab to move to the next or previous tool. Press Enter or Space to add or remove this tool. Use Up or Down arrow to reorder.</span>
+                    <div class="customize-tools-list" id="customize-tools-list" role="listbox" tabindex="0" aria-label="Creation toolbar tools" aria-describedby="customize-tools-help">
                         <!-- rows rendered dynamically -->
                     </div>
 
@@ -408,11 +414,11 @@
                 </div>
 
                 <div class="modal-footer customize-footer">
-                    <a href="#" id="customize-back-btn" class="cancel-link">Back</a>
                     <div class="customize-footer-actions">
-                        <button id="reset-default-btn" class="reset-btn">Reset to Default</button>
                         <button id="save-customize-btn" class="continue-custom-btn">Save</button>
+                        <button id="reset-default-btn" class="reset-btn">Reset to Default</button>
                     </div>
+                    <a href="#" id="customize-back-btn" class="cancel-link">Back</a>
                 </div>
             </div>
 
@@ -427,10 +433,10 @@
                             <h4 id="setting-sr-shortcuts">Contextual screen reader shortcuts</h4>
                             <p id="setting-sr-shortcuts-desc"><kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">I</kbd>: Voice details about selected object. &nbsp;<kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">D</kbd>: Voice board details.</p>
                         </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" aria-labelledby="setting-sr-shortcuts" aria-describedby="setting-sr-shortcuts-desc" checked>
+                        <button type="button" class="toggle-switch" role="checkbox" aria-checked="true"
+                                aria-labelledby="setting-sr-shortcuts" aria-describedby="setting-sr-shortcuts-desc">
                             <span class="slider" aria-hidden="true"></span>
-                        </label>
+                        </button>
                     </div>
                     <div class="setting-card">
                         <div class="setting-icon" aria-hidden="true"><strong>ALT</strong></div>
@@ -438,10 +444,10 @@
                             <h4 id="setting-alt-text">Automatically read alt-text</h4>
                             <p id="setting-alt-text-desc">If turned off, read alt-text of a selected image using <kbd class="inline-kbd">Ctrl</kbd> + <kbd class="inline-kbd">I</kbd>.</p>
                         </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" aria-labelledby="setting-alt-text" aria-describedby="setting-alt-text-desc" checked>
+                        <button type="button" class="toggle-switch" role="checkbox" aria-checked="true"
+                                aria-labelledby="setting-alt-text" aria-describedby="setting-alt-text-desc">
                             <span class="slider" aria-hidden="true"></span>
-                        </label>
+                        </button>
                     </div>
                     <div class="setting-card">
                         <div class="setting-icon" aria-hidden="true">⌨️</div>
@@ -449,18 +455,18 @@
                             <h4 id="setting-spatial">Spatial creation shortcuts</h4>
                             <p id="setting-spatial-desc">Use <kbd class="inline-kbd">N</kbd> → <kbd class="inline-kbd">→</kbd> to create a note to the right, or <kbd class="inline-kbd">N</kbd> → <kbd class="inline-kbd">Shift ↓</kbd> to create and link below.</p>
                         </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" aria-labelledby="setting-spatial" aria-describedby="setting-spatial-desc" checked>
+                        <button type="button" class="toggle-switch" role="checkbox" aria-checked="true"
+                                aria-labelledby="setting-spatial" aria-describedby="setting-spatial-desc">
                             <span class="slider" aria-hidden="true"></span>
-                        </label>
+                        </button>
                     </div>
                 </div>
 
                 <a href="#" class="link settings-learn-link">Learn more about accessibility in Miro</a>
 
                 <div class="modal-footer space-between">
-                    <button id="settings-back-btn" class="gray-back-btn">Back</button>
                     <button id="done-btn">Done</button>
+                    <button id="settings-back-btn" class="gray-back-btn">Back</button>
                 </div>
             </div>
 

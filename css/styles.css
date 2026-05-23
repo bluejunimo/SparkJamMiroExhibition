@@ -779,11 +779,31 @@ button.link:focus-visible, .link.link-button:focus-visible { outline: 2px solid 
     margin-top: 8px;
 }
 
+/* Focus ring on the listbox container so sighted keyboard users see when it's the focus target */
+#customize-tools-list:focus-visible {
+    outline: 2px solid #4262ff;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
 .customize-footer-actions {
     display: flex;
     gap: 12px;
     align-items: center;
 }
+
+/* Tab-order vs. visual-order overrides (DOM order is the tab order; flex order keeps the visuals unchanged) */
+/* Step "Name your toolbar" footer: DOM is Continue, Cancel — visually keep Cancel on the left */
+#step-custom-name .modal-footer #cancel-custom-name-btn { order: 1; }
+#step-custom-name .modal-footer #continue-custom-name-btn { order: 2; }
+/* Customize-creation footer: DOM is actions(Save,Reset) then Back — visually keep Back on the left, Reset then Save on the right */
+.customize-footer .customize-footer-actions { order: 2; }
+.customize-footer #customize-back-btn { order: 1; }
+.customize-footer-actions #reset-default-btn { order: 1; }
+.customize-footer-actions #save-customize-btn { order: 2; }
+/* Step-2 footer: DOM is Done, Back — visually keep Back on the left */
+#step-2 .modal-footer #settings-back-btn { order: 1; }
+#step-2 .modal-footer #done-btn { order: 2; }
 
 .reset-btn {
     background: #ff8585;
@@ -896,14 +916,25 @@ button.link:focus-visible, .link.link-button:focus-visible { outline: 2px solid 
 .setting-text h4 { font-size: 15px; font-weight: 700; color: #000; margin-bottom: 6px; }
 .setting-text p { font-size: 13px; color: #555; line-height: 1.6; margin: 0; }
 
-.toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0; }
+.toggle-switch {
+    position: relative; display: inline-block;
+    width: 50px; height: 28px; flex-shrink: 0;
+    /* Reset native <button> styling */
+    background: transparent; border: none; padding: 0; margin: 0;
+    cursor: pointer; font: inherit; color: inherit;
+}
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 34px; }
 .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
 input:checked + .slider { background-color: #4262ff; }
 input:checked + .slider:before { transform: translateX(22px); }
+/* role=checkbox button variant — key the slider visuals off aria-checked */
+.toggle-switch[role="checkbox"][aria-checked="true"] .slider { background-color: #4262ff; }
+.toggle-switch[role="checkbox"][aria-checked="true"] .slider:before { transform: translateX(22px); }
 .setting-card:has(:focus-visible) { border: 2px solid #4262ff; }
 .toggle-switch input:focus-visible + .slider { outline: 2px solid #4262ff; outline-offset: 2px; }
+.toggle-switch[role="checkbox"]:focus-visible .slider { outline: 2px solid #4262ff; outline-offset: 2px; }
+.toggle-switch[role="checkbox"]:focus { outline: none; }
 
 /* ─────────────────────────────────────────────────────
    SIDEBAR Z-INDEX

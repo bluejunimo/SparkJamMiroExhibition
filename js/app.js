@@ -1313,7 +1313,9 @@ function renderToolRows() {
         row.className = 'tool-row';
         row.dataset.toolId = tool.id;
         row.dataset.index = String(idx);
-        row.setAttribute('tabindex', '0');
+        // Rows are NOT in the tab order — the listbox container is. Enter on the container
+        // moves focus to row 1; Escape on a row returns focus to the container.
+        row.setAttribute('tabindex', '-1');
         row.setAttribute('draggable', 'true');
         row.setAttribute('role', 'option');
         row.setAttribute('aria-selected', tool.enabled ? 'true' : 'false');
@@ -1405,9 +1407,9 @@ function renderCustomColumnFromSaved() {
     if (!savedCustomToolbar) {
         colTitle.textContent = 'Create your own toolbar';
         previewBox.innerHTML =
-            '<span class="custom-placeholder-icon">?</span>' +
-            '<span class="custom-placeholder-icon">?</span>' +
-            '<span class="add-btn">+</span>';
+            '<span class="custom-placeholder-icon" aria-hidden="true">?</span>' +
+            '<span class="custom-placeholder-icon" aria-hidden="true">?</span>' +
+            '<span class="add-btn" aria-hidden="true">+</span>';
         editBtn.classList.add('hidden');
         customBtn.classList.remove('selected');
         const orig = customBtn.getAttribute('data-original-text');
@@ -1468,7 +1470,7 @@ function moveTool(fromIndex, toIndex) {
     renderSidebarFromDraft();
     const row = customizeToolsList.querySelector(`[data-tool-id="${moved.id}"]`);
     if (row) row.focus();
-    announcePolite(`${moved.label} moved to position ${toIndex + 1} of ${creationToolbarDraft.length}.`);
+    announcePolite('Moved.');
 }
 
 // --- Drag and drop ---
@@ -1520,8 +1522,7 @@ function onRowDrop(e) {
     renderSidebarFromDraft();
     const movedRow = customizeToolsList.querySelector(`[data-tool-id="${moved.id}"]`);
     if (movedRow) movedRow.focus();
-    const finalIdx = creationToolbarDraft.findIndex(t => t.id === moved.id);
-    announcePolite(`${moved.label} moved to position ${finalIdx + 1} of ${creationToolbarDraft.length}.`);
+    announcePolite('Moved.');
 }
 
 function onRowDragEnd(e) {
@@ -1554,8 +1555,35 @@ function onRowKeyDown(e) {
             e.preventDefault();
             moveTool(idx, idx + 1);
             break;
+        case 'Tab': {
+            // While inside the listbox, Tab/Shift+Tab cycle through rows
+            // (Escape exits the section to the listbox container).
+            e.preventDefault();
+            const rows = Array.from(customizeToolsList.children);
+            const currentIdx = rows.indexOf(row);
+            if (currentIdx === -1 || rows.length === 0) return;
+            const dir = e.shiftKey ? -1 : 1;
+            const nextIdx = (currentIdx + dir + rows.length) % rows.length;
+            rows[nextIdx].focus();
+            break;
+        }
+        case 'Escape':
+            e.preventDefault();
+            customizeToolsList.focus();
+            break;
     }
 }
+
+// Enter on the listbox container itself moves focus to row 1 (entering "edit mode").
+customizeToolsList.addEventListener('keydown', (e) => {
+    // Only handle when the listbox container itself is the focus target (not a row).
+    if (e.target !== customizeToolsList) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        const firstRow = customizeToolsList.firstElementChild;
+        if (firstRow) firstRow.focus();
+    }
+});
 
 // --- Step entry / exit handlers ---
 
@@ -1568,8 +1596,8 @@ function enterCustomizeStep(fromStep) {
     if (fromStep) fromStep.classList.add('hidden');
     modalHeader.classList.add('hidden');
     stepCustomizeCreation.classList.remove('hidden');
-    const first = customizeToolsList.firstElementChild;
-    if (first) first.focus();
+    // Focus the listbox container, not a row — user presses Enter to start editing.
+    customizeToolsList.focus();
     announceStep('step-customize-creation');
 }
 
@@ -1593,8 +1621,8 @@ document.getElementById('reset-default-btn').addEventListener('click', () => {
     creationToolbarDraft = makeDefaultDraft();
     renderToolRows();
     renderSidebarFromDraft();
-    const first = customizeToolsList.firstElementChild;
-    if (first) first.focus();
+    announcePolite('Toolbar reset to default. All 12 tools enabled.');
+    // Focus stays on the Reset button so sighted keyboard users aren't surprised.
 });
 
 document.getElementById('save-customize-btn').addEventListener('click', () => {
@@ -1615,14 +1643,22 @@ document.getElementById('save-customize-btn').addEventListener('click', () => {
     stepCustomizeCreation.classList.add('hidden');
     modalHeader.classList.remove('hidden');
     step1.classList.remove('hidden');
+    // Move focus to the Continue button so the user can continue the onboarding flow without hunting.
+    continueBtn.focus();
 });
 
 doneBtn.addEventListener('click', () => {
     onboardingOverlay.classList.add('hidden');
     setOnboardingBackgroundInert(false);
     announcePolite('Onboarding complete. Toolbar is now ready. Press Tab to navigate objects, or use the toolbar to create new ones. Press ? for keyboard shortcuts.');
-    // Focus the first toolbar button after modal closes
-    setTimeout(() => sidebar.querySelector('.tool-btn')?.focus(), 100);
+    // Activate the Select tool by default and focus it
+    setTimeout(() => {
+        const selectBtn = sidebar.querySelector('[data-tool="select"]');
+        if (selectBtn) {
+            activateToolBtn(selectBtn);
+            selectBtn.focus();
+        }
+    }, 100);
 });
 
 document.getElementById('settings-back-btn').addEventListener('click', () => {
@@ -1831,14 +1867,22 @@ window.addEventListener('click', () => {
 
 initExtendedColorPanel();
 
-// Step-2 toggle change announcements + sync with the accessibility menu mirrors
-document.querySelectorAll('#step-2 .toggle-switch input[type="checkbox"]').forEach(input => {
-    input.addEventListener('change', () => {
-        const labelId = input.getAttribute('aria-labelledby');
-        const labelEl = labelId && document.getElementById(labelId);
-        const name = labelEl ? labelEl.textContent.trim() : 'Setting';
-        announcePolite(`${name} turned ${input.checked ? 'on' : 'off'}.`);
-        if (typeof syncMenuTogglesFromSettings === 'function') syncMenuTogglesFromSettings();
+// Step-2 toggle switches (role=switch buttons). Two helpers below let click handlers
+// AND menu mirrors set the value without re-toggling.
+function setStep2Switch(btn, checked, announce = true) {
+    if (!btn) return;
+    const current = btn.getAttribute('aria-checked') === 'true';
+    if (current === checked) return;
+    btn.setAttribute('aria-checked', checked ? 'true' : 'false');
+    if (announce) {
+        // Mirror standard screen-reader checkbox feedback: just "checked" or "unchecked".
+        announcePolite(checked ? 'Checked.' : 'Unchecked.');
+    }
+    if (typeof syncMenuTogglesFromSettings === 'function') syncMenuTogglesFromSettings();
+}
+document.querySelectorAll('#step-2 .toggle-switch[role="checkbox"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setStep2Switch(btn, btn.getAttribute('aria-checked') !== 'true');
     });
 });
 
@@ -2016,14 +2060,23 @@ document.addEventListener('click', (e) => {
 });
 
 // ----- toggle sync (menu ↔ step-2) -----
+// Step-2 toggles are <button role="checkbox" aria-checked="true|false"> elements.
 function getSettingInput(id) {
     const h4 = document.getElementById(id);
-    return h4 && h4.closest('.setting-card') ? h4.closest('.setting-card').querySelector('input[type="checkbox"]') : null;
+    if (!h4) return null;
+    const card = h4.closest('.setting-card');
+    return card ? card.querySelector('.toggle-switch[role="checkbox"]') : null;
+}
+function isSettingChecked(el) {
+    return el && el.getAttribute('aria-checked') === 'true';
+}
+function setSettingChecked(el, checked) {
+    if (el) el.setAttribute('aria-checked', checked ? 'true' : 'false');
 }
 function syncMenuTogglesFromSettings() {
     document.querySelectorAll('.a11y-toggle-row[data-mirrors]').forEach(row => {
-        const input = getSettingInput(row.dataset.mirrors);
-        if (input) row.setAttribute('aria-checked', input.checked ? 'true' : 'false');
+        const btn = getSettingInput(row.dataset.mirrors);
+        if (btn) row.setAttribute('aria-checked', isSettingChecked(btn) ? 'true' : 'false');
     });
 }
 
@@ -2033,15 +2086,9 @@ document.querySelectorAll('.a11y-toggle-row').forEach(row => {
         row.setAttribute('aria-checked', String(next));
         const mirrorId = row.dataset.mirrors;
         if (mirrorId) {
-            const input = getSettingInput(mirrorId);
-            if (input && input.checked !== next) {
-                input.checked = next;
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            // Mirror across menu copies (main + sr submenu)
-            document.querySelectorAll(`.a11y-toggle-row[data-mirrors="${mirrorId}"]`).forEach(r => {
-                r.setAttribute('aria-checked', String(next));
-            });
+            const btn = getSettingInput(mirrorId);
+            // setStep2Switch updates aria-checked, announces, AND re-syncs all menu mirrors.
+            setStep2Switch(btn, next);
         } else {
             announcePolite(`${row.querySelector('.a11y-menu-label').textContent.trim()} turned ${next ? 'on' : 'off'}.`);
         }
@@ -2154,7 +2201,6 @@ document.getElementById('a11y-onboarding-btn').addEventListener('click', () => {
     stepCustomizeCreation.classList.add('hidden');
     step2.classList.add('hidden');
     if (savedCustomToolbar) renderCustomColumnFromSaved();
-    setTimeout(() => document.getElementById('onboarding-title').focus(), 50);
     announceStep('step-1');
 });
 
@@ -2166,14 +2212,9 @@ document.getElementById('a11y-checker-btn').addEventListener('click', () => {
 // Initialize menu state
 syncMenuTogglesFromSettings();
 
-// On initial load, move focus into the onboarding dialog and announce step 1
+// On initial load, announce step 1 (do NOT auto-focus the title — that produced a triple
+// "Accessibility Settings, heading level 2" announcement on top of the dialog's own
+// aria-labelledby/describedby announcement).
 if (onboardingOverlay && !onboardingOverlay.classList.contains('hidden')) {
-    const title = document.getElementById('onboarding-title');
-    if (title) {
-        // Small delay so AT picks up the dialog first
-        setTimeout(() => {
-            title.focus();
-            announceStep('step-1');
-        }, 50);
-    }
+    setTimeout(() => announceStep('step-1'), 50);
 }
